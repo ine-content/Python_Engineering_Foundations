@@ -1,10 +1,10 @@
-# lists_challenges.py
-# Python Lists — Student Challenges
+# lists_challenges_merged.py
+# Python Lists — Student Challenge (Merged)
 # Cisco IaC Perspective
 #
 # HOW IT WORKS:
-# 1. Read the challenge carefully
-# 2. Write your solution in a file called: solution.py
+# 1. Read each task carefully
+# 2. Write your solution in a file called: lists_solution.py
 # 3. Run this script again — it will evaluate your solution
 # 4. Fix any hints and re-run until you get Good Job!
 
@@ -29,11 +29,7 @@ def header(text):
     print(f"    {CYAN}{text}{RESET}")
 
 def copyable(text):
-    """Print with no indentation so student can copy directly."""
     print(f"{CYAN}{text}{RESET}")
-
-def success(text):
-    print(f"    {GREEN}✔  {text}{RESET}")
 
 def fail(text):
     print(f"    {RED}✘  {text}{RESET}")
@@ -47,28 +43,22 @@ def explain(text):
 def blank():
     print()
 
+def task_section(num, title, difficulty):
+    stars = {"Easy": "★☆☆", "Medium": "★★☆", "Hard": "★★★"}
+    label = f"Task {num:02d} — {title}  |  {difficulty} {stars[difficulty]}"
+    print(f"{BOLD}{'─' * 62}{RESET}")
+    print(f"{BOLD}  {label}{RESET}")
+    print(f"{BOLD}{'─' * 62}{RESET}")
+    blank()
+
 def section(title):
     print(f"{BOLD}{'─' * 62}{RESET}")
     print(f"{BOLD}  {title}{RESET}")
     print(f"{BOLD}{'─' * 62}{RESET}")
     blank()
 
-def challenge_header(num, title, difficulty):
-    stars = {"Easy": "★☆☆", "Medium": "★★☆", "Hard": "★★★"}
-    bar = "█" * 62
-    print()
-    print(f"{BOLD}{bar}{RESET}")
-    print(f"{BOLD}{bar}{RESET}")
-    print()
-    print(f"{BOLD}  CHALLENGE {num} — {title}{RESET}")
-    print(f"{BOLD}  Difficulty: {difficulty}  {stars[difficulty]}{RESET}")
-    print()
-    print(f"{BOLD}{bar}{RESET}")
-    print(f"{BOLD}{bar}{RESET}")
-    blank()
-
 # ─────────────────────────────────────────────────────────────────────────────
-# DATA — shared across all challenges
+# DATA
 # ─────────────────────────────────────────────────────────────────────────────
 INVENTORY = [
     {"hostname": "nyc-rtr-01", "platform": "IOS-XE", "status": "up",   "vlans": [10, 20, 30],      "ip": "10.0.0.1"},
@@ -84,11 +74,9 @@ INVENTORY = [
 # ─────────────────────────────────────────────────────────────────────────────
 # GRADER
 # ─────────────────────────────────────────────────────────────────────────────
-def run_solution(challenge_num):
-    """Load and execute the student's solution file."""
+def run_solution():
     import sys
-    filename = f"lists_solution_ch{challenge_num}.py"
-
+    filename = "lists_solution.py"
     if not os.path.exists(filename):
         blank()
         fail(f"File '{filename}' not found.")
@@ -97,11 +85,7 @@ def run_solution(challenge_num):
         explain(f"  as this script, write your solution, then run this")
         explain(f"  script again.")
         blank()
-        explain(f"  Do not move on to the next challenge until this")
-        explain(f"  one is complete.")
-        blank()
         sys.exit()
-
     namespace = {"INVENTORY": INVENTORY}
     try:
         with open(filename) as f:
@@ -112,15 +96,14 @@ def run_solution(challenge_num):
         return namespace
     except Exception:
         blank()
-        fail(f"Your script raised an error:")
+        fail("Your script raised an error:")
         print()
         traceback.print_exc()
         blank()
         return None
 
 
-def check(task_label, label, actual, expected, hint_text, solution_code, var_name):
-    """Run one assertion. Return True if passed."""
+def check(task_label, label, actual, expected, hint_text, solution_ways, var_name):
     if actual == expected:
         print(f"    {GREEN}✔  {task_label}: {label}{RESET}")
         return True
@@ -129,9 +112,12 @@ def check(task_label, label, actual, expected, hint_text, solution_code, var_nam
         blank()
         hint(hint_text)
         blank()
-        print(f"    {YELLOW}Solution:{RESET}")
-        print(f"    {CYAN}>>> {solution_code}{RESET}")
-        blank()
+        print(f"    {YELLOW}Ways to write the solution:{RESET}")
+        for way_label, way_code in solution_ways:
+            print(f"    {YELLOW}  ▸ {way_label}{RESET}")
+            for line in way_code:
+                print(f"    {CYAN}    {line}{RESET}")
+            blank()
         print(f"    {YELLOW}What you should see when it is correct:{RESET}")
         print(f"    {CYAN}>>> print({var_name}){RESET}")
         if isinstance(expected, list) and len(expected) > 4:
@@ -147,16 +133,12 @@ def check(task_label, label, actual, expected, hint_text, solution_code, var_nam
         return False
 
 
-def grade(challenge_num, checks):
-    """
-    checks — list of (label, actual, expected, hint_text, solution_code, var_name)
-    Returns True if all passed.
-    """
+def grade(checks):
     blank()
     section("Grading your solution...")
     passed = 0
-    for task_label, label, actual, expected, hint_text, solution_code, var_name in checks:
-        if check(task_label, label, actual, expected, hint_text, solution_code, var_name):
+    for task_label, label, actual, expected, hint_text, solution_ways, var_name in checks:
+        if check(task_label, label, actual, expected, hint_text, solution_ways, var_name):
             passed += 1
     blank()
     total = len(checks)
@@ -182,7 +164,6 @@ def grade(challenge_num, checks):
 # ═════════════════════════════════════════════════════════════════════════════
 print()
 bar = "█" * 62
-print()
 print(f"{BOLD}{bar}{RESET}")
 print(f"{BOLD}{bar}{RESET}")
 print()
@@ -192,18 +173,15 @@ print()
 print(f"{BOLD}{bar}{RESET}")
 print(f"{BOLD}{bar}{RESET}")
 blank()
-explain("You have three challenges — Easy, Medium, Hard.")
-explain("Each one uses the same device INVENTORY list.")
-explain("Read the challenge, write your solution in the")
-explain("correct file, then run this script to check it.")
+explain("12 tasks — Easy, Medium, and Hard — all in one challenge.")
+explain("All tasks use the same device INVENTORY list.")
+explain("Read each task, write your solution in the file below,")
+explain("then run this script to check it.")
 blank()
-explain("Files to create:")
-explain("  Challenge 1 (Easy)   → lists_solution_ch1.py")
-explain("  Challenge 2 (Medium) → lists_solution_ch2.py")
-explain("  Challenge 3 (Hard)   → lists_solution_ch3.py")
+explain("File to create:  lists_solution.py")
 blank()
-explain("IMPORTANT: Copy the INVENTORY list shown on the")
-explain("next screen into the TOP of each solution file.")
+explain("IMPORTANT: Copy the INVENTORY list shown on the next")
+explain("screen into the TOP of your solution file.")
 explain("Your solution will not work without it.")
 
 pause()
@@ -212,8 +190,7 @@ pause()
 # SHOW INVENTORY
 # ═════════════════════════════════════════════════════════════════════════════
 section("The INVENTORY You Will Work With")
-
-explain("Copy this entire block into the TOP of each solution file.")
+explain("Copy this entire block into the TOP of your solution file.")
 explain("It is printed with NO indentation so you can copy it directly.")
 blank()
 copyable("INVENTORY = [")
@@ -223,42 +200,50 @@ copyable("]")
 blank()
 explain("Your solution file should start like this:")
 blank()
-copyable("# lists_solution_ch1.py")
+copyable("# lists_solution.py")
 copyable("")
 copyable("INVENTORY = [")
 copyable("    {'hostname': 'nyc-rtr-01', ...},")
 copyable("    ...")
 copyable("]")
 copyable("")
-copyable("# your code below")
+copyable("# your answers below — one variable per task")
 copyable("all_hostnames = [...]")
 blank()
 
 pause()
 
 # ═════════════════════════════════════════════════════════════════════════════
-# CHALLENGE 1 — EASY
+# TASKS
 # ═════════════════════════════════════════════════════════════════════════════
-challenge_header(1, "Device Report", "Easy")
 
-explain("Using the INVENTORY list, produce the following:")
+# ── Task 1 ────────────────────────────────────────────────────────────────────
+task_section(1, "Extract all hostnames", "Easy")
+explain("Goal:  Build a list of the hostname of every device.")
 blank()
-
-section("Task A")
-explain("Create a list called 'all_hostnames' containing")
-explain("the hostname of every device in INVENTORY.")
-explain("Order must match the original INVENTORY order.")
+explain("Rules:")
+explain("  • Include all 8 devices.")
+explain("  • Keep the same order as INVENTORY.")
+blank()
+explain("Variable name:  all_hostnames")
 blank()
 header(">>> print(all_hostnames)")
-header("['nyc-rtr-01', 'lon-sw-01', 'sin-fw-01', 'ams-rtr-02', 'tok-sw-01', 'syd-rtr-01', 'dub-fw-01', 'mum-rtr-01']")
+header("['nyc-rtr-01', 'lon-sw-01', 'sin-fw-01', 'ams-rtr-02',")
+header(" 'tok-sw-01', 'syd-rtr-01', 'dub-fw-01', 'mum-rtr-01']")
 blank()
 
 pause()
 
-section("Task B")
-explain("Create a list called 'up_hostnames' containing")
-explain("the hostname of every device whose status is 'up'.")
-explain("Order must match the original INVENTORY order.")
+# ── Task 2 ────────────────────────────────────────────────────────────────────
+task_section(2, "Filter devices that are UP", "Easy")
+explain("Goal:  Build a list of hostnames for devices whose")
+explain("       status is 'up' only.")
+blank()
+explain("Rules:")
+explain("  • Skip any device whose status is 'down'.")
+explain("  • Keep the same order as INVENTORY.")
+blank()
+explain("Variable name:  up_hostnames")
 blank()
 header(">>> print(up_hostnames)")
 header("['nyc-rtr-01', 'sin-fw-01', 'ams-rtr-02', 'syd-rtr-01', 'mum-rtr-01']")
@@ -266,9 +251,14 @@ blank()
 
 pause()
 
-section("Task C")
-explain("Create a variable called 'down_count' containing")
-explain("the number of devices whose status is 'down'.")
+# ── Task 3 ────────────────────────────────────────────────────────────────────
+task_section(3, "Count devices that are DOWN", "Easy")
+explain("Goal:  Count how many devices have status 'down'.")
+blank()
+explain("Rules:")
+explain("  • Store the result as a single integer (not a list).")
+blank()
+explain("Variable name:  down_count")
 blank()
 header(">>> print(down_count)")
 header("3")
@@ -276,9 +266,17 @@ blank()
 
 pause()
 
-section("Task D")
-explain("Create a list called 'platforms' containing the")
-explain("platform of every device — UPPERCASE — in INVENTORY order.")
+# ── Task 4 ────────────────────────────────────────────────────────────────────
+task_section(4, "Extract platforms in UPPERCASE", "Easy")
+explain("Goal:  Build a list of the platform of every device,")
+explain("       converted to UPPERCASE.")
+blank()
+explain("Rules:")
+explain("  • Include all 8 devices.")
+explain("  • Keep the same order as INVENTORY.")
+explain("  • Each platform string must be fully uppercase.")
+blank()
+explain("Variable name:  platforms")
 blank()
 header(">>> print(platforms)")
 header("['IOS-XE', 'NX-OS', 'ASA', 'IOS-XE', 'NX-OS', 'IOS-XE', 'ASA', 'IOS-XE']")
@@ -286,96 +284,37 @@ blank()
 
 pause()
 
-explain("Write your solution in: lists_solution_ch1.py")
-explain("Remember to paste INVENTORY at the top of your file.")
-explain("Use list comprehensions where possible.")
+# ── Task 5 ────────────────────────────────────────────────────────────────────
+task_section(5, "Flatten all VLANs into one list", "Medium")
+explain("Goal:  Build a single flat list containing every VLAN ID")
+explain("       from every device.")
 blank()
-explain("Example structure:")
+explain("Rules:")
+explain("  • Each device has a 'vlans' key with a list of VLAN IDs.")
+explain("  • Outer loop must follow INVENTORY order.")
+explain("  • Inner loop must follow each device's vlan list order.")
+explain("  • Do NOT remove duplicates — keep every occurrence.")
 blank()
-header("# lists_solution_ch1.py")
-header("")
-header("all_hostnames = [...]")
-header("up_hostnames  = [...]")
-header("down_count    = ...")
-header("platforms     = [...]")
-
-pause()
-
-# ── Grade Challenge 1 ─────────────────────────────────────────────────────────
-ns = run_solution(1)
-if ns:
-    expected_all  = [d["hostname"] for d in INVENTORY]
-    expected_up   = [d["hostname"] for d in INVENTORY if d["status"] == "up"]
-    expected_down = sum(1 for d in INVENTORY if d["status"] == "down")
-    expected_plat = [d["platform"].upper() for d in INVENTORY]
-
-    grade(1, [
-        (
-            "Task A",
-            "all_hostnames — all 8 hostnames in order",
-            ns.get("all_hostnames"),
-            expected_all,
-            "See Chapter 8 — list comprehensions.",
-            "all_hostnames = [d['hostname'] for d in INVENTORY]",
-            "all_hostnames",
-        ),
-        (
-            "Task B",
-            "up_hostnames — only devices with status 'up'",
-            ns.get("up_hostnames"),
-            expected_up,
-            "See Chapter 8.2 — filtering with an if clause.",
-            "up_hostnames = [d['hostname'] for d in INVENTORY if d['status'] == 'up']",
-            "up_hostnames",
-        ),
-        (
-            "Task C",
-            "down_count — number of devices that are down",
-            ns.get("down_count"),
-            expected_down,
-            "See Chapter 9 — sum() with a generator expression.",
-            "down_count = sum(1 for d in INVENTORY if d['status'] == 'down')",
-            "down_count",
-        ),
-        (
-            "Task D",
-            "platforms — platform of every device, uppercase",
-            ns.get("platforms"),
-            expected_plat,
-            "See Chapter 8.1 — call .upper() inside the comprehension.",
-            "platforms = [d['platform'].upper() for d in INVENTORY]",
-            "platforms",
-        ),
-    ])
-
-pause()
-
-# ═════════════════════════════════════════════════════════════════════════════
-# CHALLENGE 2 — MEDIUM
-# ═════════════════════════════════════════════════════════════════════════════
-challenge_header(2, "VLAN Analysis", "Medium")
-
-explain("Using the INVENTORY list, produce the following.")
-explain("Each device has a 'vlans' key containing a list of VLAN IDs.")
-blank()
-
-pause()
-
-section("Task A")
-explain("Create a list called 'all_vlans' containing every VLAN ID")
-explain("from every device — flattened into a single list.")
-explain("Order: outer loop follows INVENTORY order,")
-explain("inner loop follows each device's vlan list order.")
+explain("Variable name:  all_vlans")
 blank()
 header(">>> print(all_vlans)")
-header("[10, 20, 30, 10, 20, 30, 40, 50, 10, 20, 30, 40, 20, 30, 10, 40, 50, 10, 20, 30, 20, 30, 40, 50]")
+header("[10, 20, 30, 10, 20, 30, 40, 50, 10, 20, 30, 40, 20, 30,")
+header(" 10, 40, 50, 10, 20, 30, 20, 30, 40, 50]")
 blank()
 
 pause()
 
-section("Task B")
-explain("Create a list called 'unique_vlans' containing every")
-explain("unique VLAN ID across all devices, sorted ascending.")
+# ── Task 6 ────────────────────────────────────────────────────────────────────
+task_section(6, "List unique VLANs in ascending order", "Medium")
+explain("Goal:  Build a sorted list of unique VLAN IDs that")
+explain("       appear across the entire inventory.")
+blank()
+explain("Rules:")
+explain("  • Each VLAN ID must appear exactly once.")
+explain("  • Sort ascending (lowest number first).")
+explain("  • You may use all_vlans from Task 5 as a starting point.")
+blank()
+explain("Variable name:  unique_vlans")
 blank()
 header(">>> print(unique_vlans)")
 header("[10, 20, 30, 40, 50]")
@@ -383,9 +322,16 @@ blank()
 
 pause()
 
-section("Task C")
-explain("Create a list called 'vlan_30_devices' containing the")
-explain("hostname of every device that has VLAN 30 in its vlan list.")
+# ── Task 7 ────────────────────────────────────────────────────────────────────
+task_section(7, "Find devices carrying VLAN 30", "Medium")
+explain("Goal:  Build a list of hostnames for every device")
+explain("       that has VLAN 30 in its vlan list.")
+blank()
+explain("Rules:")
+explain("  • Check each device's 'vlans' list for the value 30.")
+explain("  • Keep the same order as INVENTORY.")
+blank()
+explain("Variable name:  vlan_30_devices")
 blank()
 header(">>> print(vlan_30_devices)")
 header("['nyc-rtr-01', 'sin-fw-01', 'ams-rtr-02', 'tok-sw-01', 'dub-fw-01']")
@@ -393,104 +339,46 @@ blank()
 
 pause()
 
-section("Task D")
-explain("Create a list called 'vlan_summary' — a list of dicts.")
-explain("Each dict has 'hostname' and 'vlan_count' keys.")
-explain("Only include devices that have MORE THAN 2 VLANs.")
-explain("Sort by vlan_count descending.")
+# ── Task 8 ────────────────────────────────────────────────────────────────────
+task_section(8, "Summarise devices with more than 2 VLANs", "Medium")
+explain("Goal:  Build a list of dicts — one dict per device that")
+explain("       has MORE THAN 2 VLANs — sorted by vlan_count")
+explain("       descending (highest count first).")
+blank()
+explain("Rules:")
+explain("  • Only include devices where len(vlans) > 2.")
+explain("  • Each dict must have exactly two keys:")
+explain("      'hostname'   — the device hostname")
+explain("      'vlan_count' — the number of VLANs on that device")
+explain("  • Sort by vlan_count descending.")
+blank()
+explain("Variable name:  vlan_summary")
 blank()
 header(">>> print(vlan_summary)")
-header("[{'hostname': 'mum-rtr-01', 'vlan_count': 4}, {'hostname': 'ams-rtr-02', 'vlan_count': 4},")
-header(" {'hostname': 'sin-fw-01', 'vlan_count': 3},  {'hostname': 'nyc-rtr-01', 'vlan_count': 3},")
-header(" {'hostname': 'syd-rtr-01', 'vlan_count': 3}, {'hostname': 'dub-fw-01', 'vlan_count': 3}]")
+header("[{'hostname': 'mum-rtr-01', 'vlan_count': 4},")
+header(" {'hostname': 'ams-rtr-02', 'vlan_count': 4},")
+header(" {'hostname': 'sin-fw-01',  'vlan_count': 3},")
+header(" {'hostname': 'nyc-rtr-01', 'vlan_count': 3},")
+header(" {'hostname': 'syd-rtr-01', 'vlan_count': 3},")
+header(" {'hostname': 'dub-fw-01',  'vlan_count': 3}]")
 blank()
 
 pause()
 
-explain("Write your solution in: lists_solution_ch2.py")
-explain("Remember to paste INVENTORY at the top of your file.")
+# ── Task 9 ────────────────────────────────────────────────────────────────────
+task_section(9, "Generate IOS-XE config blocks", "Hard")
+explain("Goal:  Build a list of multi-line config strings — one")
+explain("       string per device that is BOTH 'up' AND 'IOS-XE'.")
 blank()
-explain("Tips:")
-explain("  Task A — nested list comprehension (Chapter 8.5)")
-explain("  Task B — sorted(set(...))")
-explain("  Task C — 'if 30 in d[\"vlans\"]' in comprehension")
-explain("  Task D — build dicts in comprehension, then sort")
-
-pause()
-
-# ── Grade Challenge 2 ─────────────────────────────────────────────────────────
-ns = run_solution(2)
-if ns:
-    expected_all_vlans    = [v for d in INVENTORY for v in d["vlans"]]
-    expected_unique       = sorted(set(expected_all_vlans))
-    expected_vlan30       = [d["hostname"] for d in INVENTORY if 30 in d["vlans"]]
-    expected_summary_raw  = [{"hostname": d["hostname"], "vlan_count": len(d["vlans"])}
-                              for d in INVENTORY if len(d["vlans"]) > 2]
-    expected_summary      = sorted(expected_summary_raw,
-                                   key=lambda x: x["vlan_count"], reverse=True)
-
-    grade(2, [
-        (
-            "Task A",
-            "all_vlans — every vlan from every device, flattened",
-            ns.get("all_vlans"),
-            expected_all_vlans,
-            "See Chapter 8.5 — nested list comprehension.",
-            "all_vlans = [v for d in INVENTORY for v in d['vlans']]",
-            "all_vlans",
-        ),
-        (
-            "Task B",
-            "unique_vlans — unique vlans sorted ascending",
-            ns.get("unique_vlans"),
-            expected_unique,
-            "See Chapter 6 and 9 — wrap in set() to deduplicate, then sorted().",
-            "unique_vlans = sorted(set(all_vlans))",
-            "unique_vlans",
-        ),
-        (
-            "Task C",
-            "vlan_30_devices — hostnames of devices with vlan 30",
-            ns.get("vlan_30_devices"),
-            expected_vlan30,
-            "See Chapter 4.1 — use the 'in' operator to check membership.",
-            "vlan_30_devices = [d['hostname'] for d in INVENTORY if 30 in d['vlans']]",
-            "vlan_30_devices",
-        ),
-        (
-            "Task D",
-            "vlan_summary — dicts with hostname+vlan_count, >2 vlans, sorted desc",
-            ns.get("vlan_summary"),
-            expected_summary,
-            "See Chapter 6.2 — build dicts in comprehension, filter >2, sort with key=lambda.",
-            "vlan_summary = sorted([{'hostname': d['hostname'], 'vlan_count': len(d['vlans'])} for d in INVENTORY if len(d['vlans']) > 2], key=lambda x: x['vlan_count'], reverse=True)",
-            "vlan_summary",
-        ),
-    ])
-
-pause()
-
-# ═════════════════════════════════════════════════════════════════════════════
-# CHALLENGE 3 — HARD
-# ═════════════════════════════════════════════════════════════════════════════
-challenge_header(3, "Config Generator", "Hard")
-
-explain("Using the INVENTORY list, produce the following.")
-explain("This challenge combines everything — iteration,")
-explain("filtering, transformation, comprehensions, and sorting.")
-blank()
-
-pause()
-
-section("Task A")
-explain("Create a list called 'config_blocks' — one config")
-explain("string per device that is 'up' AND platform 'IOS-XE'.")
-explain("Each string must follow this exact format:")
+explain("Rules:")
+explain("  • Skip any device that is 'down' or not 'IOS-XE'.")
+explain(r"  • Each config string must use \n to separate these three lines:")
 blank()
 header("  'hostname <hostname>\\n ntp server 10.0.0.100\\n ip domain-name corp.net'")
 blank()
-explain("Only include devices that are up AND IOS-XE.")
-explain("Order must match INVENTORY order.")
+explain("  • Keep the same order as INVENTORY.")
+blank()
+explain("Variable name:  config_blocks")
 blank()
 header(">>> for block in config_blocks: print(block)")
 header("hostname nyc-rtr-01")
@@ -509,40 +397,70 @@ blank()
 
 pause()
 
-section("Task B")
-explain("Create a list called 'ip_hostname_pairs' — a list of")
-explain("strings in the format 'ip --> hostname', for ALL devices,")
-explain("sorted alphabetically by hostname.")
+# ── Task 10 ───────────────────────────────────────────────────────────────────
+task_section(10, "Build IP to hostname pairs sorted by hostname", "Hard")
+explain("Goal:  Build a list of strings in the format")
+explain("       'ip --> hostname' for ALL 8 devices,")
+explain("       sorted alphabetically by hostname.")
+blank()
+explain("Rules:")
+explain("  • Include every device regardless of status or platform.")
+explain("  • Format each string exactly as:  'x.x.x.x --> hostname'")
+explain("  • Sort the final list by the hostname part (A to Z).")
+blank()
+explain("Variable name:  ip_hostname_pairs")
 blank()
 header(">>> print(ip_hostname_pairs)")
-header("['10.3.0.1 --> ams-rtr-02', '10.6.0.1 --> dub-fw-01', '10.1.0.1 --> lon-sw-01',")
-header(" '10.7.0.1 --> mum-rtr-01', '10.0.0.1 --> nyc-rtr-01', '10.2.0.1 --> sin-fw-01',")
+header("['10.3.0.1 --> ams-rtr-02', '10.6.0.1 --> dub-fw-01',")
+header(" '10.1.0.1 --> lon-sw-01',  '10.7.0.1 --> mum-rtr-01',")
+header(" '10.0.0.1 --> nyc-rtr-01', '10.2.0.1 --> sin-fw-01',")
 header(" '10.5.0.1 --> syd-rtr-01', '10.4.0.1 --> tok-sw-01']")
 blank()
 
 pause()
 
-section("Task C")
-explain("Create a list called 'numbered_inventory' — a list of")
-explain("strings that number each device. Include ALL devices.")
-explain("Number starts at 1. Format: 'N. hostname (platform) — status'")
+# ── Task 11 ───────────────────────────────────────────────────────────────────
+task_section(11, "Number every device in the inventory", "Hard")
+explain("Goal:  Build a list of strings that label each device")
+explain("       with a sequential number.")
+blank()
+explain("Rules:")
+explain("  • Include all 8 devices.")
+explain("  • Numbering starts at 1 and follows INVENTORY order.")
+explain("  • Format each string exactly as:")
+explain("      'N. hostname (platform) \u2014 status'")
+explain("    where N is the device's position number.")
+blank()
+explain("Variable name:  numbered_inventory")
 blank()
 header(">>> print(numbered_inventory)")
-header("['1. nyc-rtr-01 (IOS-XE) — up',   '2. lon-sw-01 (NX-OS) — down',")
-header(" '3. sin-fw-01 (ASA) — up',    '4. ams-rtr-02 (IOS-XE) — up',")
-header(" '5. tok-sw-01 (NX-OS) — down', '6. syd-rtr-01 (IOS-XE) — up',")
-header(" '7. dub-fw-01 (ASA) — down',  '8. mum-rtr-01 (IOS-XE) — up']")
+header("['1. nyc-rtr-01 (IOS-XE) \u2014 up',")
+header(" '2. lon-sw-01 (NX-OS) \u2014 down',")
+header(" '3. sin-fw-01 (ASA) \u2014 up',")
+header(" '4. ams-rtr-02 (IOS-XE) \u2014 up',")
+header(" '5. tok-sw-01 (NX-OS) \u2014 down',")
+header(" '6. syd-rtr-01 (IOS-XE) \u2014 up',")
+header(" '7. dub-fw-01 (ASA) \u2014 down',")
+header(" '8. mum-rtr-01 (IOS-XE) \u2014 up']")
 blank()
 
 pause()
 
-section("Task D")
-explain("Create a list called 'platform_groups' — a list of dicts,")
-explain("one per unique platform, sorted alphabetically by platform.")
-explain("Each dict has:")
-explain("  'platform' — the platform name")
-explain("  'count'    — how many devices have that platform")
-explain("  'up_count' — how many of those devices are 'up'")
+# ── Task 12 ───────────────────────────────────────────────────────────────────
+task_section(12, "Group devices by platform", "Hard")
+explain("Goal:  Build a list of dicts — one dict per unique platform")
+explain("       — summarising the total device count and how many")
+explain("       of those devices are currently 'up'.")
+blank()
+explain("Rules:")
+explain("  • One dict per unique platform (3 platforms total).")
+explain("  • Sort the list alphabetically by platform name.")
+explain("  • Each dict must have exactly three keys:")
+explain("      'platform' — the platform name (e.g. 'IOS-XE')")
+explain("      'count'    — total devices with that platform")
+explain("      'up_count' — devices with that platform AND status 'up'")
+blank()
+explain("Variable name:  platform_groups")
 blank()
 header(">>> print(platform_groups)")
 header("[{'platform': 'ASA',    'count': 2, 'up_count': 1},")
@@ -552,38 +470,56 @@ blank()
 
 pause()
 
-explain("Write your solution in: lists_solution_ch3.py")
+# ── Tips ──────────────────────────────────────────────────────────────────────
+explain("Write your solution in: lists_solution.py")
 explain("Remember to paste INVENTORY at the top of your file.")
 blank()
-explain("Tips:")
-explain("  Task A — f-string with \\n, double filter in comprehension")
-explain("  Task B — f-string, sorted() with key=lambda")
-explain("  Task C — enumerate(INVENTORY, start=1)")
-explain("  Task D — find unique platforms first with set(),")
-explain("           then build one dict per platform using")
-explain("           a comprehension over sorted platforms")
+explain("Tips by task:")
+explain("  Task  1 — list comprehension: [d['hostname'] for d in INVENTORY]")
+explain("  Task  2 — add an if clause:   [... if d['status'] == 'up']")
+explain("  Task  3 — sum() with a generator expression")
+explain("  Task  4 — call .upper() inside the comprehension")
+explain("  Task  5 — nested comprehension: [v for d in INVENTORY for v in d['vlans']]")
+explain("  Task  6 — sorted(set(all_vlans))")
+explain("  Task  7 — use 'in' operator: if 30 in d['vlans']")
+explain("  Task  8 — build dicts in comprehension, filter > 2, sort with key=lambda")
+explain("  Task  9 — double filter: if d['status'] == 'up' and d['platform'] == 'IOS-XE'")
+explain("  Task 10 — sorted(..., key=lambda s: s.split(' --> ')[1])")
+explain("  Task 11 — enumerate(INVENTORY, start=1)")
+explain("  Task 12 — get unique platforms with set(), sort, build one dict per platform")
 
 pause()
 
-# ── Grade Challenge 3 ─────────────────────────────────────────────────────────
-ns = run_solution(3)
+# ═════════════════════════════════════════════════════════════════════════════
+# GRADE
+# ═════════════════════════════════════════════════════════════════════════════
+ns = run_solution()
 if ns:
+
+    expected_all_hostnames = [d["hostname"] for d in INVENTORY]
+    expected_up_hostnames  = [d["hostname"] for d in INVENTORY if d["status"] == "up"]
+    expected_down_count    = sum(1 for d in INVENTORY if d["status"] == "down")
+    expected_platforms     = [d["platform"].upper() for d in INVENTORY]
+
+    expected_all_vlans   = [v for d in INVENTORY for v in d["vlans"]]
+    expected_unique      = sorted(set(expected_all_vlans))
+    expected_vlan30      = [d["hostname"] for d in INVENTORY if 30 in d["vlans"]]
+    expected_summary_raw = [{"hostname": d["hostname"], "vlan_count": len(d["vlans"])}
+                             for d in INVENTORY if len(d["vlans"]) > 2]
+    expected_summary     = sorted(expected_summary_raw, key=lambda x: x["vlan_count"], reverse=True)
+
     expected_configs = [
         f"hostname {d['hostname']}\n ntp server 10.0.0.100\n ip domain-name corp.net"
-        for d in INVENTORY
-        if d["status"] == "up" and d["platform"] == "IOS-XE"
+        for d in INVENTORY if d["status"] == "up" and d["platform"] == "IOS-XE"
     ]
-
     expected_pairs = sorted(
         [f"{d['ip']} --> {d['hostname']}" for d in INVENTORY],
         key=lambda s: s.split(" --> ")[1]
     )
-
     expected_numbered = [
-        f"{i}. {d['hostname']} ({d['platform']}) — {d['status']}"
+        f"{i}. {d['hostname']} ({d['platform']}) \u2014 {d['status']}"
         for i, d in enumerate(INVENTORY, start=1)
     ]
-
     platforms_unique = sorted(set(d["platform"] for d in INVENTORY))
     expected_groups  = [
         {
@@ -594,44 +530,229 @@ if ns:
         for p in platforms_unique
     ]
 
-    grade(3, [
-        (
-            "Task A",
-            "config_blocks — 4 IOS-XE + up devices, correct format",
-            ns.get("config_blocks"),
-            expected_configs,
-            "See Chapter 8.3 — double filter with 'and', use f-string with \\n.",
-            "config_blocks = [f\"hostname {d['hostname']}\\n ntp server 10.0.0.100\\n ip domain-name corp.net\" for d in INVENTORY if d['status'] == 'up' and d['platform'] == 'IOS-XE']",
-            "config_blocks",
-        ),
-        (
-            "Task B",
-            "ip_hostname_pairs — all 8 devices, sorted by hostname",
-            ns.get("ip_hostname_pairs"),
-            expected_pairs,
-            "See Chapter 6 — build f-string then sorted() with key=lambda.",
-            "ip_hostname_pairs = sorted([f\"{d['ip']} --> {d['hostname']}\" for d in INVENTORY], key=lambda s: s.split(' --> ')[1])",
-            "ip_hostname_pairs",
-        ),
-        (
-            "Task C",
-            "numbered_inventory — all 8, numbered from 1, correct format",
-            ns.get("numbered_inventory"),
-            expected_numbered,
-            "See Chapter 3.2 — use enumerate(INVENTORY, start=1).",
-            "numbered_inventory = [f\"{i}. {d['hostname']} ({d['platform']}) — {d['status']}\" for i, d in enumerate(INVENTORY, start=1)]",
-            "numbered_inventory",
-        ),
-        (
-            "Task D",
-            "platform_groups — 3 platforms, count + up_count, sorted",
-            ns.get("platform_groups"),
-            expected_groups,
-            "See Chapter 8 and 9 — get unique platforms with set(), sort, build one dict per platform.",
-            "platforms_unique = sorted(set(d['platform'] for d in INVENTORY))\nplatform_groups = [{'platform': p, 'count': sum(1 for d in INVENTORY if d['platform'] == p), 'up_count': sum(1 for d in INVENTORY if d['platform'] == p and d['status'] == 'up')} for p in platforms_unique]",
-            "platform_groups",
-        ),
+    ways_all_hostnames = [
+        ("List comprehension",
+         ["all_hostnames = [d['hostname'] for d in INVENTORY]"]),
+        ("For loop",
+         ["all_hostnames = []",
+          "for d in INVENTORY:",
+          "    all_hostnames.append(d['hostname'])"]),
+        ("map()",
+         ["all_hostnames = list(map(lambda d: d['hostname'], INVENTORY))"]),
+    ]
+    ways_up_hostnames = [
+        ("List comprehension with filter",
+         ["up_hostnames = [d['hostname'] for d in INVENTORY if d['status'] == 'up']"]),
+        ("For loop with if",
+         ["up_hostnames = []",
+          "for d in INVENTORY:",
+          "    if d['status'] == 'up':",
+          "        up_hostnames.append(d['hostname'])"]),
+        ("filter() + map()",
+         ["up_hostnames = list(map(lambda d: d['hostname'],",
+          "    filter(lambda d: d['status'] == 'up', INVENTORY)))"]),
+    ]
+    ways_down_count = [
+        ("sum() with generator",
+         ["down_count = sum(1 for d in INVENTORY if d['status'] == 'down')"]),
+        ("len() with comprehension",
+         ["down_count = len([d for d in INVENTORY if d['status'] == 'down'])"]),
+        ("For loop counter",
+         ["down_count = 0",
+          "for d in INVENTORY:",
+          "    if d['status'] == 'down':",
+          "        down_count += 1"]),
+    ]
+    ways_platforms = [
+        ("List comprehension with .upper()",
+         ["platforms = [d['platform'].upper() for d in INVENTORY]"]),
+        ("For loop",
+         ["platforms = []",
+          "for d in INVENTORY:",
+          "    platforms.append(d['platform'].upper())"]),
+        ("map()",
+         ["platforms = list(map(lambda d: d['platform'].upper(), INVENTORY))"]),
+    ]
+    ways_all_vlans = [
+        ("Nested list comprehension",
+         ["all_vlans = [v for d in INVENTORY for v in d['vlans']]"]),
+        ("For loop (nested)",
+         ["all_vlans = []",
+          "for d in INVENTORY:",
+          "    for v in d['vlans']:",
+          "        all_vlans.append(v)"]),
+        ("sum() to flatten",
+         ["all_vlans = sum([d['vlans'] for d in INVENTORY], [])"]),
+    ]
+    ways_unique_vlans = [
+        ("sorted(set(...))",
+         ["unique_vlans = sorted(set(all_vlans))"]),
+        ("Manual dedup with for loop",
+         ["seen = []",
+          "for v in all_vlans:",
+          "    if v not in seen:",
+          "        seen.append(v)",
+          "unique_vlans = sorted(seen)"]),
+        ("dict.fromkeys() to deduplicate",
+         ["unique_vlans = sorted(dict.fromkeys(all_vlans))"]),
+    ]
+    ways_vlan30 = [
+        ("List comprehension with 'in'",
+         ["vlan_30_devices = [d['hostname'] for d in INVENTORY if 30 in d['vlans']]"]),
+        ("For loop",
+         ["vlan_30_devices = []",
+          "for d in INVENTORY:",
+          "    if 30 in d['vlans']:",
+          "        vlan_30_devices.append(d['hostname'])"]),
+        ("filter()",
+         ["vlan_30_devices = [d['hostname'] for d in",
+          "    filter(lambda d: 30 in d['vlans'], INVENTORY)]"]),
+    ]
+    ways_vlan_summary = [
+        ("Comprehension + sorted()",
+         ["vlan_summary = sorted(",
+          "    [{'hostname': d['hostname'], 'vlan_count': len(d['vlans'])}",
+          "     for d in INVENTORY if len(d['vlans']) > 2],",
+          "    key=lambda x: x['vlan_count'], reverse=True",
+          ")"]),
+        ("For loop then sort",
+         ["vlan_summary = []",
+          "for d in INVENTORY:",
+          "    if len(d['vlans']) > 2:",
+          "        vlan_summary.append({'hostname': d['hostname'], 'vlan_count': len(d['vlans'])})",
+          "vlan_summary.sort(key=lambda x: x['vlan_count'], reverse=True)"]),
+    ]
+    ways_configs = [
+        ("List comprehension with f-string and double filter",
+         ["config_blocks = [",
+          "    f\"hostname {d['hostname']}\\n ntp server 10.0.0.100\\n ip domain-name corp.net\"",
+          "    for d in INVENTORY",
+          "    if d['status'] == 'up' and d['platform'] == 'IOS-XE'",
+          "]"]),
+        ("For loop with if",
+         ["config_blocks = []",
+          "for d in INVENTORY:",
+          "    if d['status'] == 'up' and d['platform'] == 'IOS-XE':",
+          "        block = f\"hostname {d['hostname']}\\n ntp server 10.0.0.100\\n ip domain-name corp.net\"",
+          "        config_blocks.append(block)"]),
+        ("For loop with '\\n'.join()",
+         ["config_blocks = []",
+          "for d in INVENTORY:",
+          "    if d['status'] == 'up' and d['platform'] == 'IOS-XE':",
+          "        lines = [f\"hostname {d['hostname']}\",",
+          "                 \" ntp server 10.0.0.100\",",
+          "                 \" ip domain-name corp.net\"]",
+          "        config_blocks.append('\\n'.join(lines))"]),
+    ]
+    ways_pairs = [
+        ("Comprehension + sorted() with lambda",
+         ["ip_hostname_pairs = sorted(",
+          "    [f\"{d['ip']} --> {d['hostname']}\" for d in INVENTORY],",
+          "    key=lambda s: s.split(' --> ')[1]",
+          ")"]),
+        ("For loop then sort",
+         ["ip_hostname_pairs = []",
+          "for d in INVENTORY:",
+          "    ip_hostname_pairs.append(f\"{d['ip']} --> {d['hostname']}\")",
+          "ip_hostname_pairs.sort(key=lambda s: s.split(' --> ')[1])"]),
+        ("Sort INVENTORY first, then build strings",
+         ["ip_hostname_pairs = [",
+          "    f\"{d['ip']} --> {d['hostname']}\"",
+          "    for d in sorted(INVENTORY, key=lambda d: d['hostname'])",
+          "]"]),
+    ]
+    ways_numbered = [
+        ("Comprehension with enumerate()",
+         ["numbered_inventory = [",
+          "    f\"{i}. {d['hostname']} ({d['platform']}) \u2014 {d['status']}\"",
+          "    for i, d in enumerate(INVENTORY, start=1)",
+          "]"]),
+        ("For loop with manual counter",
+         ["numbered_inventory = []",
+          "i = 1",
+          "for d in INVENTORY:",
+          "    numbered_inventory.append(f\"{i}. {d['hostname']} ({d['platform']}) \u2014 {d['status']}\")",
+          "    i += 1"]),
+        ("range() + index",
+         ["numbered_inventory = [",
+          "    f\"{i+1}. {INVENTORY[i]['hostname']} ({INVENTORY[i]['platform']}) \u2014 {INVENTORY[i]['status']}\"",
+          "    for i in range(len(INVENTORY))",
+          "]"]),
+    ]
+    ways_groups = [
+        ("set() + sorted() + comprehension",
+         ["platforms_unique = sorted(set(d['platform'] for d in INVENTORY))",
+          "platform_groups = [",
+          "    {",
+          "        'platform': p,",
+          "        'count':    sum(1 for d in INVENTORY if d['platform'] == p),",
+          "        'up_count': sum(1 for d in INVENTORY if d['platform'] == p and d['status'] == 'up'),",
+          "    }",
+          "    for p in platforms_unique",
+          "]"]),
+        ("For loop building a dict of dicts, then convert",
+         ["groups = {}",
+          "for d in INVENTORY:",
+          "    p = d['platform']",
+          "    if p not in groups:",
+          "        groups[p] = {'platform': p, 'count': 0, 'up_count': 0}",
+          "    groups[p]['count'] += 1",
+          "    if d['status'] == 'up':",
+          "        groups[p]['up_count'] += 1",
+          "platform_groups = sorted(groups.values(), key=lambda x: x['platform'])"]),
+    ]
+
+    grade([
+        ("Task  1", "all_hostnames — all 8 hostnames in INVENTORY order",
+         ns.get("all_hostnames"), expected_all_hostnames,
+         "See Chapter 8 — list comprehensions.",
+         ways_all_hostnames, "all_hostnames"),
+        ("Task  2", "up_hostnames — hostnames where status == 'up'",
+         ns.get("up_hostnames"), expected_up_hostnames,
+         "See Chapter 8.2 — add an if clause to your comprehension.",
+         ways_up_hostnames, "up_hostnames"),
+        ("Task  3", "down_count — integer count of devices with status 'down'",
+         ns.get("down_count"), expected_down_count,
+         "See Chapter 9 — sum() with a generator expression.",
+         ways_down_count, "down_count"),
+        ("Task  4", "platforms — platform of every device, uppercase",
+         ns.get("platforms"), expected_platforms,
+         "See Chapter 8.1 — call .upper() inside the comprehension.",
+         ways_platforms, "platforms"),
+        ("Task  5", "all_vlans — every VLAN from every device, flattened",
+         ns.get("all_vlans"), expected_all_vlans,
+         "See Chapter 8.5 — nested list comprehension: [v for d in INVENTORY for v in d['vlans']]",
+         ways_all_vlans, "all_vlans"),
+        ("Task  6", "unique_vlans — deduplicated VLANs sorted ascending",
+         ns.get("unique_vlans"), expected_unique,
+         "See Chapters 6 & 9 — wrap all_vlans in set() to deduplicate, then sorted().",
+         ways_unique_vlans, "unique_vlans"),
+        ("Task  7", "vlan_30_devices — hostnames of devices that carry VLAN 30",
+         ns.get("vlan_30_devices"), expected_vlan30,
+         "See Chapter 4.1 — use the 'in' operator: if 30 in d['vlans']",
+         ways_vlan30, "vlan_30_devices"),
+        ("Task  8", "vlan_summary — {hostname, vlan_count} for devices with >2 VLANs, sorted desc",
+         ns.get("vlan_summary"), expected_summary,
+         "See Chapter 6.2 — build dicts in comprehension, filter len > 2, sort with key=lambda.",
+         ways_vlan_summary, "vlan_summary"),
+        ("Task  9", "config_blocks — config strings for IOS-XE + up devices",
+         ns.get("config_blocks"), expected_configs,
+         "See Chapter 8.3 — double filter with 'and'; use \\n inside f-string.",
+         ways_configs, "config_blocks"),
+        ("Task 10", "ip_hostname_pairs — 'ip --> hostname' strings sorted by hostname",
+         ns.get("ip_hostname_pairs"), expected_pairs,
+         "See Chapter 6 — build the f-strings first, then sorted() with key=lambda.",
+         ways_pairs, "ip_hostname_pairs"),
+        ("Task 11", "numbered_inventory — '1. hostname (platform) \u2014 status' for all 8",
+         ns.get("numbered_inventory"), expected_numbered,
+         "See Chapter 3.2 — use enumerate(INVENTORY, start=1).",
+         ways_numbered, "numbered_inventory"),
+        ("Task 12", "platform_groups — [{platform, count, up_count}] sorted by platform",
+         ns.get("platform_groups"), expected_groups,
+         "See Chapters 8 & 9 — collect unique platforms with set(), sort, build one dict per platform.",
+         ways_groups, "platform_groups"),
     ])
+
 pause()
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -639,7 +760,7 @@ bar = "█" * 62
 print(f"{BOLD}{bar}{RESET}")
 print(f"{BOLD}{bar}{RESET}")
 print()
-print(f"{BOLD}   All challenges complete.{RESET}")
+print(f"{BOLD}   All tasks complete.{RESET}")
 print(f"{BOLD}   You are ready for the next topic.{RESET}")
 print()
 print(f"{BOLD}{bar}{RESET}")

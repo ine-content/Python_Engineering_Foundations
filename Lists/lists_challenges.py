@@ -103,60 +103,94 @@ def run_solution():
         return None
 
 
-def check(task_label, label, actual, expected, hint_text, solution_ways, var_name):
-    if actual == expected:
-        print(f"    {GREEN}✔  {task_label}: {label}{RESET}")
-        return True
-    else:
-        print(f"    {RED}✘  {task_label}: {label}{RESET}")
-        blank()
+def show_task_review(task_label, label, passed, actual, expected, hint_text, solution_ways, var_name):
+    """Show the full review for one task — called after the score is displayed."""
+    status = f"{GREEN}✔  PASSED{RESET}" if passed else f"{RED}✘  FAILED{RESET}"
+    print(f"{BOLD}{'─' * 62}{RESET}")
+    print(f"{BOLD}  {task_label}: {label}{RESET}")
+    print(f"  {status}")
+    print(f"{BOLD}{'─' * 62}{RESET}")
+    blank()
+
+    if not passed:
         hint(hint_text)
         blank()
-        print(f"    {YELLOW}Ways to write the solution:{RESET}")
-        for way_label, way_code in solution_ways:
-            print(f"    {YELLOW}  ▸ {way_label}{RESET}")
-            for line in way_code:
-                print(f"    {CYAN}    {line}{RESET}")
-            blank()
-        print(f"    {YELLOW}What you should see when it is correct:{RESET}")
-        print(f"    {CYAN}>>> print({var_name}){RESET}")
-        if isinstance(expected, list) and len(expected) > 4:
-            for item in expected:
-                print(f"    {GREEN}{item}{RESET}")
-        else:
-            print(f"    {GREEN}{expected}{RESET}")
-        blank()
-        print(f"    {RED}What your code produced:{RESET}")
+        print(f"    {YELLOW}What your code produced:{RESET}")
         print(f"    {CYAN}>>> print({var_name}){RESET}")
         print(f"    {RED}{actual}{RESET}")
         blank()
-        return False
+
+    print(f"    {YELLOW}Ways to write the solution:{RESET}")
+    for way_label, way_code in solution_ways:
+        print(f"    {YELLOW}  ▸ {way_label}{RESET}")
+        for line in way_code:
+            print(f"    {CYAN}    {line}{RESET}")
+        blank()
+
+    print(f"    {YELLOW}Correct output:{RESET}")
+    print(f"    {CYAN}>>> print({var_name}){RESET}")
+    if isinstance(expected, list) and len(expected) > 4:
+        for item in expected:
+            print(f"    {GREEN}{item}{RESET}")
+    else:
+        print(f"    {GREEN}{expected}{RESET}")
+    blank()
 
 
 def grade(checks):
-    blank()
-    section("Grading your solution...")
+    total = len(checks)
+
+    # ── Step 1: run all checks silently, collect results ──────────────────────
+    results = []
     passed = 0
     for task_label, label, actual, expected, hint_text, solution_ways, var_name in checks:
-        if check(task_label, label, actual, expected, hint_text, solution_ways, var_name):
+        ok = (actual == expected)
+        if ok:
             passed += 1
+        results.append((task_label, label, ok, actual, expected, hint_text, solution_ways, var_name))
+
+    # ── Step 2: show score first ───────────────────────────────────────────────
     blank()
-    total = len(checks)
-    if passed == total:
-        bar = "█" * 62
-        print(f"{BOLD}{GREEN}{bar}{RESET}")
-        print(f"{BOLD}{GREEN}{bar}{RESET}")
+    bar = "█" * 62
+    score_color = GREEN if passed >= 8 else YELLOW if passed >= 5 else RED
+    print(f"{BOLD}{bar}{RESET}")
+    print(f"{BOLD}{bar}{RESET}")
+    print()
+    print(f"{BOLD}  YOUR SCORE:  {score_color}{passed} / {total}{RESET}")
+    print()
+    for task_label, label, ok, *_ in results:
+        mark = f"{GREEN}✔{RESET}" if ok else f"{RED}✘{RESET}"
+        print(f"    {mark}  {task_label}: {label}")
+    print()
+    print(f"{BOLD}{bar}{RESET}")
+    print(f"{BOLD}{bar}{RESET}")
+
+    # ── Step 3: walk through each task review one by one ──────────────────────
+    blank()
+    explain("Press ENTER to review each task — solutions are shown for all tasks.")
+    for task_label, label, ok, actual, expected, hint_text, solution_ways, var_name in results:
+        pause()
+        show_task_review(task_label, label, ok, actual, expected, hint_text, solution_ways, var_name)
+
+    # ── Step 4: final message based on score ──────────────────────────────────
+    blank()
+    print(f"{BOLD}{bar}{RESET}")
+    print(f"{BOLD}{bar}{RESET}")
+    print()
+    if passed >= 8:
+        print(f"{BOLD}{GREEN}  ✔  GOOD JOB! You scored {passed}/{total}.{RESET}")
         print()
-        print(f"{BOLD}{GREEN}    ✔  GOOD JOB! All {total} checks passed.{RESET}")
-        print()
-        print(f"{BOLD}{GREEN}{bar}{RESET}")
-        print(f"{BOLD}{GREEN}{bar}{RESET}")
-        return True
+        print(f"{BOLD}{GREEN}  You may move on to the next topic.{RESET}")
+        print(f"{BOLD}{GREEN}  Or run this script again to aim for a perfect score.{RESET}")
     else:
-        print(f"{BOLD}{RED}{'─' * 62}{RESET}")
-        print(f"{BOLD}{RED}  {passed} of {total} checks passed. Fix the hints above and try again.{RESET}")
-        print(f"{BOLD}{RED}{'─' * 62}{RESET}")
-        return False
+        print(f"{BOLD}{RED}  You scored {passed}/{total}.{RESET}")
+        print()
+        print(f"{BOLD}{YELLOW}  We recommend trying again before moving on.{RESET}")
+        print(f"{BOLD}{YELLOW}  Review the solutions above, fix your file, and re-run.{RESET}")
+    print()
+    print(f"{BOLD}{bar}{RESET}")
+    print(f"{BOLD}{bar}{RESET}")
+    return passed >= 8
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -754,15 +788,3 @@ if ns:
     ])
 
 pause()
-
-# ─────────────────────────────────────────────────────────────────────────────
-bar = "█" * 62
-print(f"{BOLD}{bar}{RESET}")
-print(f"{BOLD}{bar}{RESET}")
-print()
-print(f"{BOLD}   All tasks complete.{RESET}")
-print(f"{BOLD}   You are ready for the next topic.{RESET}")
-print()
-print(f"{BOLD}{bar}{RESET}")
-print(f"{BOLD}{bar}{RESET}")
-print()

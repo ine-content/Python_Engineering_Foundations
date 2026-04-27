@@ -3,18 +3,11 @@
 # Cisco IaC Perspective
 #
 # HOW IT WORKS:
-# 1. Read the challenge carefully
-# 2. Write your solution in the correct file
-# 3. Run this script again — it will evaluate your solution
-# 4. Fix any hints and re-run until you get Good Job!
+# 1. Read each task carefully
+# 2. Write your solution in a file called: file_io_solution.py
+# 3. Run file_io_grading.py to check your answers
 
 import os
-import sys
-import csv
-import json
-import shutil
-import tempfile
-import traceback
 
 # ── ANSI colors ───────────────────────────────────────────────────────────────
 RESET  = "\033[0m"
@@ -30,9 +23,6 @@ def pause():
     input(f"\n{DIM}  [ Press ENTER to continue ]{RESET} ")
     print()
 
-def copyable(text):
-    print(f"{CYAN}{text}{RESET}")
-
 def header(text):
     print(f"    {CYAN}{text}{RESET}")
 
@@ -42,28 +32,22 @@ def explain(text):
 def blank():
     print()
 
+def task_section(num, title, difficulty):
+    stars = {"Easy": "★☆☆", "Medium": "★★☆", "Hard": "★★★"}
+    label = f"Task {num:02d} — {title}  |  {difficulty} {stars[difficulty]}"
+    print(f"{BOLD}{'─' * 62}{RESET}")
+    print(f"{BOLD}  {label}{RESET}")
+    print(f"{BOLD}{'─' * 62}{RESET}")
+    blank()
+
 def section(title):
     print(f"{BOLD}{'─' * 62}{RESET}")
     print(f"{BOLD}  {title}{RESET}")
     print(f"{BOLD}{'─' * 62}{RESET}")
     blank()
 
-def challenge_header(num, title, difficulty):
-    stars = {"Easy": "★☆☆", "Medium": "★★☆", "Hard": "★★★"}
-    bar = "█" * 62
-    print()
-    print(f"{BOLD}{bar}{RESET}")
-    print(f"{BOLD}{bar}{RESET}")
-    print()
-    print(f"{BOLD}  CHALLENGE {num} — {title}{RESET}")
-    print(f"{BOLD}  Difficulty: {difficulty}  {stars[difficulty]}{RESET}")
-    print()
-    print(f"{BOLD}{bar}{RESET}")
-    print(f"{BOLD}{bar}{RESET}")
-    blank()
-
 # ─────────────────────────────────────────────────────────────────────────────
-# SHARED TEST DATA
+# DATA
 # ─────────────────────────────────────────────────────────────────────────────
 INVENTORY = [
     {"hostname": "nyc-rtr-01", "platform": "IOS-XE", "status": "up",
@@ -94,120 +78,11 @@ INVENTORY = [
 
 GLOBAL_NTP = "10.0.0.100"
 
-# ─────────────────────────────────────────────────────────────────────────────
-# GRADER
-# ─────────────────────────────────────────────────────────────────────────────
-def run_solution(challenge_num, work_dir):
-    """
-    Run the student's solution file inside work_dir.
-    Injects INVENTORY, GLOBAL_NTP, and WORK_DIR into the namespace.
-    """
-    filename = f"file_io_solution_ch{challenge_num}.py"
-    if not os.path.exists(filename):
-        blank()
-        print(f"    {RED}✘  File '{filename}' not found.{RESET}")
-        blank()
-        explain(f"  Create a file called '{filename}' in the same folder")
-        explain(f"  as this script, write your solution, then run this")
-        explain(f"  script again.")
-        blank()
-        explain(f"  Do not move on to the next challenge until this")
-        explain(f"  one is complete.")
-        blank()
-        sys.exit()
-
-    namespace = {
-        "INVENTORY":  INVENTORY,
-        "GLOBAL_NTP": GLOBAL_NTP,
-        "WORK_DIR":   work_dir,
-        "os":         os,
-        "csv":        csv,
-        "json":       json,
-    }
-    try:
-        with open(filename) as f:
-            code = f.read()
-        import textwrap
-        code = textwrap.dedent(code)
-        # Run from inside WORK_DIR so relative paths work
-        old_cwd = os.getcwd()
-        os.chdir(work_dir)
-        try:
-            exec(compile(code, filename, "exec"), namespace)
-        finally:
-            os.chdir(old_cwd)
-        return namespace
-    except Exception:
-        blank()
-        print(f"    {RED}✘  Your script raised an error:{RESET}")
-        print()
-        traceback.print_exc()
-        blank()
-        return None
-
-
-def check(task_label, label, actual, expected, hint_text, solution_code, var_name):
-    if actual == expected:
-        print(f"    {GREEN}✔  {task_label}: {label}{RESET}")
-        return True
-    else:
-        print(f"    {RED}✘  {task_label}: {label}{RESET}")
-        blank()
-        print(f"    {YELLOW}💡 Hint: {hint_text}{RESET}")
-        blank()
-        print(f"    {YELLOW}Solution:{RESET}")
-        for line in solution_code.split("\n"):
-            print(f"    {CYAN}>>> {line}{RESET}")
-        blank()
-        print(f"    {YELLOW}What you should see when it is correct:{RESET}")
-        print(f"    {CYAN}>>> print({var_name}){RESET}")
-        if isinstance(expected, list) and len(expected) > 4:
-            for item in expected:
-                print(f"    {GREEN}{item}{RESET}")
-        elif isinstance(expected, dict) and len(expected) > 4:
-            for k, v in expected.items():
-                print(f"    {GREEN}{k!r}: {v!r}{RESET}")
-        else:
-            print(f"    {GREEN}{expected}{RESET}")
-        blank()
-        print(f"    {RED}What your code produced:{RESET}")
-        print(f"    {CYAN}>>> print({var_name}){RESET}")
-        print(f"    {RED}{actual}{RESET}")
-        blank()
-        return False
-
-
-def grade(challenge_num, checks_list):
-    blank()
-    section("Grading your solution...")
-    passed = 0
-    for args in checks_list:
-        if check(*args):
-            passed += 1
-    blank()
-    total = len(checks_list)
-    if passed == total:
-        bar = "█" * 62
-        print(f"{BOLD}{GREEN}{bar}{RESET}")
-        print(f"{BOLD}{GREEN}{bar}{RESET}")
-        print()
-        print(f"{BOLD}{GREEN}    ✔  GOOD JOB! All {total} checks passed.{RESET}")
-        print()
-        print(f"{BOLD}{GREEN}{bar}{RESET}")
-        print(f"{BOLD}{GREEN}{bar}{RESET}")
-        return True
-    else:
-        print(f"{BOLD}{RED}{'─' * 62}{RESET}")
-        print(f"{BOLD}{RED}  {passed} of {total} checks passed. Fix the hints above and try again.{RESET}")
-        print(f"{BOLD}{RED}{'─' * 62}{RESET}")
-        return False
-
-
 # ═════════════════════════════════════════════════════════════════════════════
 # INTRO
 # ═════════════════════════════════════════════════════════════════════════════
-bar = "█" * 62
 print()
+bar = "█" * 62
 print(f"{BOLD}{bar}{RESET}")
 print(f"{BOLD}{bar}{RESET}")
 print()
@@ -217,59 +92,38 @@ print()
 print(f"{BOLD}{bar}{RESET}")
 print(f"{BOLD}{bar}{RESET}")
 blank()
-explain("You have two challenges — Easy and Medium.")
-explain("Each one involves reading and writing real files.")
+explain("8 tasks — Easy and Medium — all in one challenge.")
+explain("Each task involves reading and writing real files.")
+explain("Read each task, write your solution in file_io_solution.py,")
+explain("then run file_io_grading.py to check it.")
 blank()
-explain("Files to create:")
-explain("  Challenge 1 (Easy)   → file_io_solution_ch1.py")
-explain("  Challenge 2 (Medium) → file_io_solution_ch2.py")
-blank()
-explain("HOW GRADING WORKS FOR FILE I/O:")
+explain("HOW FILE GRADING WORKS:")
 explain("  Your script runs in a temporary working directory.")
-explain("  Use relative paths — just 'devices.txt', not full path.")
+explain("  Use RELATIVE paths — just 'devices.txt', not a full path.")
 explain("  The grader reads the files your script creates and")
 explain("  checks their contents.")
 blank()
-explain("INVENTORY, GLOBAL_NTP, os, csv, json are all available")
-explain("in your solution file — no need to import or define them.")
-explain("(But you CAN import them again — no harm done.)")
+explain("INVENTORY, GLOBAL_NTP, os, csv, and json are all")
+explain("pre-injected — no need to import or redefine them.")
+explain("(But you can import them again — no harm done.)")
 
 pause()
 
 # ═════════════════════════════════════════════════════════════════════════════
-# SHOW INVENTORY
+# TASKS
 # ═════════════════════════════════════════════════════════════════════════════
-section("The INVENTORY You Will Work With")
 
-explain("This is available in your solution file as INVENTORY.")
+# ── Task 1 ────────────────────────────────────────────────────────────────────
+task_section(1, "Write hostnames to a text file", "Easy")
+explain("Goal:  Write the hostname of every device in INVENTORY")
+explain("       to a file called 'hostnames.txt', one per line.")
 blank()
-copyable("INVENTORY = [")
-for d in INVENTORY:
-    copyable(f"    {d},")
-copyable("]")
+explain("Rules:")
+explain("  • Use relative path: 'hostnames.txt'")
+explain("  • One hostname per line, no extra blank lines.")
 blank()
-copyable("GLOBAL_NTP = '10.0.0.100'")
+explain("Expected contents of hostnames.txt:")
 blank()
-
-pause()
-
-# ═════════════════════════════════════════════════════════════════════════════
-# CHALLENGE 1 — EASY
-# ═════════════════════════════════════════════════════════════════════════════
-challenge_header(1, "Plain Text File Read and Write", "Easy")
-
-explain("Read and write plain text files using INVENTORY.")
-explain("Use relative paths — the grader runs your script")
-explain("from a temporary working directory.")
-blank()
-
-pause()
-
-section("Task A")
-explain("Write the hostname of every device in INVENTORY")
-explain("to a file called 'hostnames.txt', one per line.")
-blank()
-header("Expected contents of hostnames.txt:")
 header("nyc-rtr-01")
 header("lon-sw-01")
 header("sin-fw-01")
@@ -282,10 +136,16 @@ blank()
 
 pause()
 
-section("Task B")
-explain("Read back 'hostnames.txt' and produce a list called")
-explain("'read_hostnames' containing each hostname as a string.")
-explain("No trailing newlines — strip each line.")
+# ── Task 2 ────────────────────────────────────────────────────────────────────
+task_section(2, "Read hostnames back from the text file", "Easy")
+explain("Goal:  Read 'hostnames.txt' back and produce a list called")
+explain("       'read_hostnames' containing each hostname as a string.")
+blank()
+explain("Rules:")
+explain("  • Strip trailing newlines from each line.")
+explain("  • Skip any blank lines.")
+blank()
+explain("Variable name:  read_hostnames")
 blank()
 header(">>> print(read_hostnames)")
 header("['nyc-rtr-01', 'lon-sw-01', 'sin-fw-01', 'ams-rtr-02',")
@@ -294,19 +154,25 @@ blank()
 
 pause()
 
-section("Task C")
-explain("Parse a device list file. The grader will create a file")
-explain("called 'device_list.txt' in your working directory with")
-explain("this content:")
+# ── Task 3 ────────────────────────────────────────────────────────────────────
+task_section(3, "Parse a structured device list file", "Easy")
+explain("Goal:  Read a pre-created file called 'device_list.txt'")
+explain("       and produce a list called 'parsed_devices' — one")
+explain("       dict per device line.")
+blank()
+explain("Rules:")
+explain("  • The grader creates 'device_list.txt' for you with this content:")
 blank()
 header("# hostname        platform   ip")
 header("nyc-rtr-01        IOS-XE     10.0.0.1")
 header("lon-sw-01         NX-OS      10.1.0.1")
 header("sin-fw-01         ASA        10.2.0.1")
 blank()
-explain("Read this file and produce a list called 'parsed_devices'")
-explain("— one dict per device line (skip comment/blank lines).")
-explain("Each dict: {'hostname': ..., 'platform': ..., 'ip': ...}")
+explain("  • Skip lines that start with '#' or are blank.")
+explain("  • Split each valid line on whitespace to get 3 fields.")
+explain("  • Each dict: {'hostname': ..., 'platform': ..., 'ip': ...}")
+blank()
+explain("Variable name:  parsed_devices")
 blank()
 header(">>> print(parsed_devices)")
 header("[{'hostname': 'nyc-rtr-01', 'platform': 'IOS-XE', 'ip': '10.0.0.1'},")
@@ -316,18 +182,24 @@ blank()
 
 pause()
 
-section("Task D")
-explain("Create a folder called 'configs' and write one config")
-explain("file per device in INVENTORY.")
-explain("Filename: configs/<hostname>.cfg")
-explain("Content (3 lines per file):")
+# ── Task 4 ────────────────────────────────────────────────────────────────────
+task_section(4, "Write one config file per device", "Easy")
+explain("Goal:  Create a folder called 'configs' and write one")
+explain("       config file per device in INVENTORY.")
+blank()
+explain("Rules:")
+explain("  • Folder:   configs/")
+explain("  • Filename: configs/<hostname>.cfg")
+explain("  • Content — exactly 3 lines:")
 blank()
 header("hostname <hostname>")
 header("ntp server <ntp from config>")
 header("ip name-server <dns from config>")
 blank()
-explain("After writing, store the SORTED list of .cfg filenames")
-explain("(not full paths — just the filename) in 'cfg_files'.")
+explain("  • After writing, store the SORTED list of .cfg filenames")
+explain("    (just the filename, not the full path) in 'cfg_files'.")
+blank()
+explain("Variable name:  cfg_files")
 blank()
 header(">>> print(cfg_files)")
 header("['ams-rtr-02.cfg', 'dub-fw-01.cfg', 'lon-sw-01.cfg',")
@@ -337,128 +209,38 @@ blank()
 
 pause()
 
-explain("Write your solution in: file_io_solution_ch1.py")
+# ── Task 5 ────────────────────────────────────────────────────────────────────
+task_section(5, "Write INVENTORY to a CSV file", "Medium")
+explain("Goal:  Write INVENTORY to a CSV file called 'inventory.csv'")
+explain("       using csv.DictWriter.")
 blank()
-explain("Tips:")
-explain("  Task A — open('hostnames.txt','w') then f.write(h+'\\n') for each. Ch 4.1.")
-explain("  Task B — open read, line.strip() for line in f, filter blanks. Ch 3.3.")
-explain("  Task C — file 'device_list.txt' is pre-created. Skip # and blank lines.")
-explain("           parts=line.split() gives [hostname, platform, ip]. Ch 3.4.")
-explain("  Task D — os.makedirs('configs', exist_ok=True), write 3 lines per device.")
-explain("           sorted(os.listdir('configs')) for file list. Ch 5.3.")
-
-pause()
-
-# ── Grade Challenge 1 ─────────────────────────────────────────────────────────
-work_dir_1 = tempfile.mkdtemp(prefix="ch1_")
-
-# Pre-create device_list.txt for Task C
-with open(os.path.join(work_dir_1, "device_list.txt"), "w") as f:
-    f.write("# hostname        platform   ip\n")
-    f.write("nyc-rtr-01        IOS-XE     10.0.0.1\n")
-    f.write("lon-sw-01         NX-OS      10.1.0.1\n")
-    f.write("sin-fw-01         ASA        10.2.0.1\n")
-
-ns = run_solution(1, work_dir_1)
-if ns:
-    # Task A — check file contents
-    txt_path = os.path.join(work_dir_1, "hostnames.txt")
-    file_lines = []
-    if os.path.exists(txt_path):
-        with open(txt_path) as f:
-            file_lines = [l.strip() for l in f if l.strip()]
-
-    exp_lines = [d["hostname"] for d in INVENTORY]
-
-    # Task B — check read_hostnames variable
-    read_hostnames = ns.get("read_hostnames")
-
-    # Task C — check parsed_devices
-    parsed_devices = ns.get("parsed_devices")
-    exp_parsed = [
-        {"hostname": "nyc-rtr-01", "platform": "IOS-XE", "ip": "10.0.0.1"},
-        {"hostname": "lon-sw-01",  "platform": "NX-OS",  "ip": "10.1.0.1"},
-        {"hostname": "sin-fw-01",  "platform": "ASA",    "ip": "10.2.0.1"},
-    ]
-
-    # Task D — check cfg_files list and actual file contents
-    cfg_files = ns.get("cfg_files")
-    exp_cfg_files = sorted(f"{d['hostname']}.cfg" for d in INVENTORY)
-
-    # Also verify content of one cfg file
-    sample_cfg_path = os.path.join(work_dir_1, "configs", "nyc-rtr-01.cfg")
-    sample_cfg = ""
-    if os.path.exists(sample_cfg_path):
-        with open(sample_cfg_path) as f:
-            sample_cfg = f.read().strip()
-    exp_sample_cfg = "hostname nyc-rtr-01\nntp server 10.0.0.100\nip name-server 8.8.8.8"
-
-    grade(1, [
-        (
-            "Task A", "hostnames.txt — 8 hostnames written, one per line",
-            file_lines, exp_lines,
-            "See Chapter 4.1 — open('hostnames.txt','w') then f.write(d['hostname']+'\\n') for each device.",
-            "with open('hostnames.txt', 'w') as f:\n    for d in INVENTORY:\n        f.write(d['hostname'] + '\\n')",
-            "contents of hostnames.txt",
-        ),
-        (
-            "Task B", "read_hostnames — list of 8 stripped hostnames",
-            read_hostnames, exp_lines,
-            "See Chapter 3.3 — iterate file, strip() each line, skip blanks.",
-            "with open('hostnames.txt') as f:\n    read_hostnames = [line.strip() for line in f if line.strip()]",
-            "read_hostnames",
-        ),
-        (
-            "Task C", "parsed_devices — 3 dicts from device_list.txt",
-            parsed_devices, exp_parsed,
-            "See Chapter 3.4 — skip lines starting with # or blank. parts=line.split() gives 3 fields.",
-            "parsed_devices = []\nwith open('device_list.txt') as f:\n    for line in f:\n        line = line.strip()\n        if not line or line.startswith('#'): continue\n        p = line.split()\n        parsed_devices.append({'hostname':p[0],'platform':p[1],'ip':p[2]})",
-            "parsed_devices",
-        ),
-        (
-            "Task D", "cfg_files — sorted list of .cfg filenames + correct file content",
-            (cfg_files, sample_cfg), (exp_cfg_files, exp_sample_cfg),
-            "See Chapter 5.3 and 6.1 — makedirs('configs'), write 3 lines per device, sorted(os.listdir('configs')).",
-            "os.makedirs('configs', exist_ok=True)\nfor d in INVENTORY:\n    with open(f\"configs/{d['hostname']}.cfg\",'w') as f:\n        f.write(f\"hostname {d['hostname']}\\n\")\n        f.write(f\"ntp server {d['config']['ntp']}\\n\")\n        f.write(f\"ip name-server {d['config']['dns']}\\n\")\ncfg_files = sorted(os.listdir('configs'))",
-            "(cfg_files, nyc-rtr-01.cfg contents)",
-        ),
-    ])
-
-shutil.rmtree(work_dir_1, ignore_errors=True)
-pause()
-
-# ═════════════════════════════════════════════════════════════════════════════
-# CHALLENGE 2 — MEDIUM
-# ═════════════════════════════════════════════════════════════════════════════
-challenge_header(2, "CSV and JSON Round-Trips", "Medium")
-
-explain("Read and write CSV and JSON files using INVENTORY.")
-explain("Your script runs in a temporary working directory —")
-explain("use relative paths throughout.")
+explain("Rules:")
+explain("  • Include these columns in this exact order:")
+explain("      hostname, platform, status, ip")
+explain("  • Include a header row.")
+explain("  • Use newline='' when opening the file.")
 blank()
-
-pause()
-
-section("Task A")
-explain("Write INVENTORY to a CSV file called 'inventory.csv'.")
-explain("Include these columns in this order:")
-explain("  hostname, platform, status, ip")
-explain("Use csv.DictWriter with a header row.")
+explain("Expected contents of inventory.csv:")
 blank()
-header("Expected contents of inventory.csv:")
 header("hostname,platform,status,ip")
 header("nyc-rtr-01,IOS-XE,up,10.0.0.1")
 header("lon-sw-01,NX-OS,down,10.1.0.1")
-header("sin-fw-01,ASA,up,10.2.0.1")
 header("... (8 rows total)")
 blank()
 
 pause()
 
-section("Task B")
-explain("Read 'inventory.csv' back using csv.DictReader.")
-explain("Produce a list called 'csv_devices' — one dict per row.")
-explain("Filter to include ONLY devices whose status is 'up'.")
+# ── Task 6 ────────────────────────────────────────────────────────────────────
+task_section(6, "Read CSV and filter UP devices", "Medium")
+explain("Goal:  Read 'inventory.csv' back using csv.DictReader")
+explain("       and produce a list called 'csv_devices' containing")
+explain("       only devices whose status is 'up'.")
+blank()
+explain("Rules:")
+explain("  • Each item is a dict with keys: hostname, platform, status, ip.")
+explain("  • Only include rows where status == 'up'.")
+blank()
+explain("Variable name:  csv_devices")
 blank()
 header(">>> print(csv_devices)")
 header("[{'hostname':'nyc-rtr-01','platform':'IOS-XE','status':'up','ip':'10.0.0.1'},")
@@ -470,11 +252,18 @@ blank()
 
 pause()
 
-section("Task C")
-explain("Write INVENTORY to a JSON file called 'inventory.json'")
-explain("using json.dump() with indent=2.")
-explain("Then read it back using json.load() and produce a")
-explain("variable called 'json_inventory' containing the data.")
+# ── Task 7 ────────────────────────────────────────────────────────────────────
+task_section(7, "Write and read INVENTORY as JSON", "Medium")
+explain("Goal:  Write INVENTORY to a JSON file called 'inventory.json'")
+explain("       using json.dump(), then read it back using json.load()")
+explain("       and store the result in 'json_inventory'.")
+blank()
+explain("Rules:")
+explain("  • Use indent=2 when writing.")
+explain("  • json_inventory must be a list of 8 dicts.")
+explain("  • Nested fields (vlans, config) must be preserved.")
+blank()
+explain("Variable name:  json_inventory")
 blank()
 header(">>> print(type(json_inventory))")
 header("<class 'list'>")
@@ -491,13 +280,19 @@ blank()
 
 pause()
 
-section("Task D")
-explain("Load 'inventory.json', enrich each device by adding")
-explain("a 'vlan_count' field (length of the vlans list),")
-explain("then write the enriched data back to 'inventory.json'.")
+# ── Task 8 ────────────────────────────────────────────────────────────────────
+task_section(8, "Enrich JSON, write back, and build a summary dict", "Medium")
+explain("Goal:  Load 'inventory.json', add a 'vlan_count' field to")
+explain("       each device, write the enriched data back to")
+explain("       'inventory.json', then read it back and build a")
+explain("       dict called 'vlan_counts' mapping hostname → vlan_count.")
 blank()
-explain("Then read it back and produce a variable called")
-explain("'vlan_counts' — a dict mapping hostname → vlan_count.")
+explain("Rules:")
+explain("  • 'vlan_count' = len(d['vlans']) for each device.")
+explain("  • Write the enriched list back to 'inventory.json' with indent=2.")
+explain("  • Read the final JSON and build vlan_counts from it.")
+blank()
+explain("Variable name:  vlan_counts")
 blank()
 header(">>> print(vlan_counts)")
 header("{'nyc-rtr-01': 3, 'lon-sw-01': 2, 'sin-fw-01': 3,")
@@ -507,95 +302,39 @@ blank()
 
 pause()
 
-explain("Write your solution in: file_io_solution_ch2.py")
+# ── Tips ──────────────────────────────────────────────────────────────────────
+explain("Write your solution in: file_io_solution.py")
+explain("Use RELATIVE paths — the grader runs your script from")
+explain("a temporary working directory.")
 blank()
-explain("Tips:")
-explain("  Task A — csv.DictWriter with fieldnames=['hostname','platform','status','ip'].")
-explain("           writeheader() then writerows(INVENTORY). newline='' in open(). Ch 7.2.")
-explain("  Task B — csv.DictReader, filter rows where row['status']=='up'. Ch 7.3.")
-explain("  Task C — json.dump(INVENTORY, f, indent=2), then json.load(f). Ch 8.2/8.3.")
-explain("  Task D — load JSON, add vlan_count, write back, reload, build dict. Ch 8.4.")
+explain("Tips by task:")
+explain("  Task 1 — open('hostnames.txt', 'w') then f.write(h + '\\n') for each")
+explain("  Task 2 — open read, [line.strip() for line in f if line.strip()]")
+explain("  Task 3 — skip lines starting with '#' or blank, parts = line.split()")
+explain("  Task 4 — os.makedirs('configs', exist_ok=True), write 3 lines per device")
+explain("           sorted(os.listdir('configs')) for the file list")
+explain("  Task 5 — csv.DictWriter with fieldnames=[...], writeheader(), writerows()")
+explain("           use newline='' when opening the file")
+explain("  Task 6 — csv.DictReader, filter rows where row['status'] == 'up'")
+explain("  Task 7 — json.dump(INVENTORY, f, indent=2), then json.load(f)")
+explain("  Task 8 — load, add vlan_count, write back, reload, build dict")
 
 pause()
 
-# ── Grade Challenge 2 ─────────────────────────────────────────────────────────
-work_dir_2 = tempfile.mkdtemp(prefix="ch2_")
-
-ns = run_solution(2, work_dir_2)
-if ns:
-    fields = ["hostname", "platform", "status", "ip"]
-
-    # Task A — check CSV file contents
-    csv_path = os.path.join(work_dir_2, "inventory.csv")
-    csv_rows = []
-    if os.path.exists(csv_path):
-        with open(csv_path, newline="") as f:
-            reader = csv.DictReader(f)
-            csv_rows = [dict(row) for row in reader]
-
-    exp_csv_rows = [{f: d[f] for f in fields} for d in INVENTORY]
-
-    # Task B — check csv_devices (up only)
-    csv_devices = ns.get("csv_devices")
-    exp_csv_up = [{f: d[f] for f in fields} for d in INVENTORY if d["status"] == "up"]
-
-    # Task C — check json_inventory
-    json_inv = ns.get("json_inventory")
-    exp_json_inv = INVENTORY  # full list
-
-    # Task D — check vlan_counts
-    vlan_counts = ns.get("vlan_counts")
-    exp_vc = {d["hostname"]: len(d["vlans"]) for d in INVENTORY}
-
-    # Also verify JSON file has vlan_count
-    json_path = os.path.join(work_dir_2, "inventory.json")
-    json_has_vc = False
-    if os.path.exists(json_path):
-        with open(json_path) as f:
-            jdata = json.load(f)
-        json_has_vc = all("vlan_count" in d for d in jdata)
-
-    grade(2, [
-        (
-            "Task A", "inventory.csv — 8 rows with hostname/platform/status/ip",
-            csv_rows, exp_csv_rows,
-            "See Chapter 7.2 — DictWriter(f, fieldnames=[...]), writeheader(), writerows(INVENTORY). Use newline=''.",
-            "with open('inventory.csv','w',newline='') as f:\n    w=csv.DictWriter(f,fieldnames=['hostname','platform','status','ip'],extrasaction='ignore')\n    w.writeheader()\n    w.writerows(INVENTORY)",
-            "inventory.csv contents",
-        ),
-        (
-            "Task B", "csv_devices — 5 up-only device dicts from CSV",
-            csv_devices, exp_csv_up,
-            "See Chapter 7.3 — DictReader, filter rows where row['status']=='up'.",
-            "with open('inventory.csv',newline='') as f:\n    csv_devices=[dict(r) for r in csv.DictReader(f) if r['status']=='up']",
-            "csv_devices",
-        ),
-        (
-            "Task C", "json_inventory — full 8-device list loaded from JSON file",
-            json_inv, exp_json_inv,
-            "See Chapter 8.2/8.3 — json.dump(INVENTORY, f, indent=2) then json.load(f).",
-            "with open('inventory.json','w') as f:\n    json.dump(INVENTORY,f,indent=2)\nwith open('inventory.json') as f:\n    json_inventory=json.load(f)",
-            "json_inventory",
-        ),
-        (
-            "Task D", "vlan_counts — hostname → vlan_count dict (enriched JSON written back)",
-            vlan_counts, exp_vc,
-            "See Chapter 8.4 — load, add vlan_count, write back, reload, build dict.",
-            "with open('inventory.json') as f: data=json.load(f)\nfor d in data: d['vlan_count']=len(d['vlans'])\nwith open('inventory.json','w') as f: json.dump(data,f,indent=2)\nwith open('inventory.json') as f: data=json.load(f)\nvlan_counts={d['hostname']:d['vlan_count'] for d in data}",
-            "vlan_counts",
-        ),
-    ])
-
-shutil.rmtree(work_dir_2, ignore_errors=True)
-pause()
-
-# ─────────────────────────────────────────────────────────────────────────────
+# ═════════════════════════════════════════════════════════════════════════════
+# DONE
+# ═════════════════════════════════════════════════════════════════════════════
 bar = "█" * 62
 print(f"{BOLD}{bar}{RESET}")
 print(f"{BOLD}{bar}{RESET}")
 print()
-print(f"{BOLD}   Both challenges complete.{RESET}")
-print(f"{BOLD}   You are ready for the next topic.{RESET}")
+print(f"{BOLD}  All tasks read. Now write your solution in:{RESET}")
+print()
+print(f"{BOLD}{CYAN}    file_io_solution.py{RESET}")
+print()
+print(f"{BOLD}  When you are ready to check your answers, run:{RESET}")
+print()
+print(f"{BOLD}{CYAN}    python3 file_io_grading.py{RESET}")
 print()
 print(f"{BOLD}{bar}{RESET}")
 print(f"{BOLD}{bar}{RESET}")

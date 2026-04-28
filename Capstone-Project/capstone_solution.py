@@ -90,17 +90,17 @@ INVENTORY = [
 ]
 
 # ─────────────────────────────────────────────────────────────────────────────
-# PART 1 — Data Structures & Filtering
+# PART 1 — Lists & Dicts
 # ─────────────────────────────────────────────────────────────────────────────
 
-# 1a — List of full device dicts where status == 'up'
-up_devices = None
+# 1a — List of hostnames where status == 'up'
+up_hostnames = None
 
 # 1b — Dict mapping hostname → ip for all 8 devices
 hostname_to_ip = None
 
-# 1c — Dict mapping site → sorted list of hostnames at that site
-site_hostnames = None
+# 1c — Dict mapping platform → count
+platform_counts = None
 
 # 1d — Sorted list of unique VLAN IDs across all devices
 all_vlans = None
@@ -110,14 +110,14 @@ all_vlans = None
 # PART 2 — Nested Structures
 # ─────────────────────────────────────────────────────────────────────────────
 
-# 2a — Dict mapping each VLAN → sorted list of hostnames that carry it
-vlan_to_hostnames = None
+# 2a — Dict mapping site → sorted list of hostnames at that site
+site_hostnames = None
 
 # 2b — Sorted list of hostnames that have a non-None 'bgp' key
 bgp_devices = None
 
-# 2c — Dict mapping hostname → {site, role, platform, status, vlan_count, has_bgp}
-enriched_inventory = None
+# 2c — Dict mapping ntp_server_ip → sorted list of hostnames using it
+ntp_map = None
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -137,14 +137,14 @@ enriched_inventory = None
 # PART 4 — Conditionals & Loops
 # ─────────────────────────────────────────────────────────────────────────────
 
-# 4a — Dict mapping platform → count (use a for loop, not comprehension)
-platform_counts = None
-
-# 4b — Hostname of first 'up' device with more than 3 VLANs (use for + break)
+# 4a — Hostname of first 'up' device with more than 3 VLANs (use for + break)
 first_large_up_device = None
 
-# 4c — List of label strings: 'OFFLINE/FIREWALL/CORE/OTHER: <hostname>'
+# 4b — List of label strings: 'OFFLINE/FIREWALL/CORE/OTHER: <hostname>'
 device_labels = None
+
+# 4c — List of hostnames whose NTP differs from GLOBAL_NTP
+custom_ntp_hosts = None
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -154,10 +154,10 @@ device_labels = None
 # 5a — Define DeviceOfflineError(Exception)
 
 
-# 5b — def safe_connect(device): raises DeviceOfflineError or returns 'connected: <hostname>'
+# 5b — def safe_connect(device)
 
 
-# 5c — def batch_connect(inventory): returns {connected, offline, errors}
+# 5c — def batch_connect(inventory) → {connected, offline, errors}
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -167,11 +167,11 @@ device_labels = None
 # 6a — Ansible inventory dict: {'all': {'hosts': {...}}}
 ansible_inv = None
 
-# 6b — ansible_inv serialized to YAML string with default_flow_style=False
+# 6b — ansible_inv serialized to YAML string
 ansible_inv_yaml = None
 
-# 6c — List of RESTCONF NTP payload dicts for UP devices only
-ntp_payloads = None
+# 6c — INVENTORY serialized to JSON and immediately parsed back
+inv_json_roundtrip = None
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -193,13 +193,12 @@ json_inventory = None
 # PART 8 — Compliance & Pipeline
 # ─────────────────────────────────────────────────────────────────────────────
 
-# 8a — compliance_report: list of {hostname, overall, checks} for all 8 devices
+# 8a — List of {hostname, overall, status_up, standard_ntp, has_vlans} for all 8 devices
 compliance_report = None
 
-# 8b — Filter: up devices on IOS-XE or NX-OS only.
-#      Build pipeline_report: list of {hostname, status, vlan_count,
-#                                       connect_result, config_lines}
-#      Build pipeline_hostnames: sorted list of their hostnames
+# 8b — Filter: up devices on IOS-XE or NX-OS only
+#      pipeline_report: list of {hostname, status, vlan_count, connect_result}
+#      pipeline_hostnames: sorted list of their hostnames
 pipeline_report    = None
 pipeline_hostnames = None
 

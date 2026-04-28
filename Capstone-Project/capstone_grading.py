@@ -23,12 +23,6 @@ def hint(text):    print(f"    {YELLOW}💡 Hint: {text}{RESET}")
 def explain(text): print(f"  {WHITE}{text}{RESET}")
 def blank():       print()
 
-def section(title):
-    print(f"{BOLD}{'─' * 62}{RESET}")
-    print(f"{BOLD}  {title}{RESET}")
-    print(f"{BOLD}{'─' * 62}{RESET}")
-    blank()
-
 # ─────────────────────────────────────────────────────────────────────────────
 # DATA
 # ─────────────────────────────────────────────────────────────────────────────
@@ -109,10 +103,9 @@ INVENTORY = [
 def run_solution(work_dir):
     filename = "capstone_solution.py"
     solution_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), filename)
-
     if not os.path.exists(solution_path):
         blank(); fail(f"File '{filename}' not found."); blank()
-        explain(f"  Create '{filename}' in the same folder and try again.")
+        explain("  Create capstone_solution.py in the same folder and try again.")
         blank(); sys.exit()
 
     namespace = {
@@ -142,7 +135,7 @@ def run_solution(work_dir):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# SHOW TASK REVIEW
+# SHOW REVIEW
 # ─────────────────────────────────────────────────────────────────────────────
 def show_task_review(label, passed, actual, expected, hint_text, solution_ways, var_name):
     status = f"{GREEN}✔  PASSED{RESET}" if passed else f"{RED}✘  FAILED{RESET}"
@@ -156,7 +149,6 @@ def show_task_review(label, passed, actual, expected, hint_text, solution_ways, 
         hint(hint_text); blank()
         print(f"    {YELLOW}What your code produced:{RESET}")
         print(f"    {CYAN}>>> print({var_name}){RESET}")
-        # truncate large outputs
         actual_str = str(actual)
         if len(actual_str) > 300:
             actual_str = actual_str[:300] + " ..."
@@ -243,35 +235,28 @@ if ns:
     # ── REFERENCE ANSWERS ─────────────────────────────────────────────────────
 
     # Part 1
-    exp_up_devices     = [d for d in INVENTORY if d["status"] == "up"]
+    exp_up_hostnames   = [d["hostname"] for d in INVENTORY if d["status"] == "up"]
     exp_h2ip           = {d["hostname"]: d["ip"] for d in INVENTORY}
-    exp_site_hosts     = {}
+    exp_plat_counts    = {}
+    for d in INVENTORY:
+        exp_plat_counts[d["platform"]] = exp_plat_counts.get(d["platform"], 0) + 1
+    exp_all_vlans      = sorted(set(v for d in INVENTORY for v in d["vlans"]))
+
+    # Part 2
+    exp_site_hosts = {}
     for d in INVENTORY:
         exp_site_hosts.setdefault(d["site"], []).append(d["hostname"])
     for k in exp_site_hosts:
         exp_site_hosts[k].sort()
-    exp_all_vlans      = sorted(set(v for d in INVENTORY for v in d["vlans"]))
-
-    # Part 2
-    exp_v2h = {}
-    for d in INVENTORY:
-        for v in d["vlans"]:
-            exp_v2h.setdefault(v, set()).add(d["hostname"])
-    exp_v2h = {k: sorted(v) for k, v in exp_v2h.items()}
 
     exp_bgp_devices = sorted(d["hostname"] for d in INVENTORY if d["bgp"] is not None)
 
-    exp_enriched = {
-        d["hostname"]: {
-            "site":        d["site"],
-            "role":        d["role"],
-            "platform":    d["platform"],
-            "status":      d["status"],
-            "vlan_count":  len(d["vlans"]),
-            "has_bgp":     d["bgp"] is not None,
-        }
-        for d in INVENTORY
-    }
+    exp_ntp_map = {}
+    for d in INVENTORY:
+        ntp = d["config"]["ntp"]
+        exp_ntp_map.setdefault(ntp, []).append(d["hostname"])
+    for k in exp_ntp_map:
+        exp_ntp_map[k].sort()
 
     # Part 3
     def _classify(h):
@@ -314,10 +299,6 @@ if ns:
     exp_by_role = sorted(d["hostname"] for d in INVENTORY if d["role"] == "core")
 
     # Part 4
-    exp_plat_counts = {}
-    for d in INVENTORY:
-        exp_plat_counts[d["platform"]] = exp_plat_counts.get(d["platform"], 0) + 1
-
     exp_first_large = None
     for d in INVENTORY:
         if d["status"] == "up" and len(d["vlans"]) > 3:
@@ -325,11 +306,14 @@ if ns:
             break
 
     def _label(d):
-        if d["status"] == "down":                       return f"OFFLINE: {d['hostname']}"
-        if d["platform"] == "ASA" and d["status"] == "up": return f"FIREWALL: {d['hostname']}"
-        if d["role"] == "core"    and d["status"] == "up": return f"CORE: {d['hostname']}"
+        if d["status"] == "down":                            return f"OFFLINE: {d['hostname']}"
+        if d["platform"] == "ASA" and d["status"] == "up":  return f"FIREWALL: {d['hostname']}"
+        if d["role"] == "core"    and d["status"] == "up":  return f"CORE: {d['hostname']}"
         return f"OTHER: {d['hostname']}"
     exp_labels = [_label(d) for d in INVENTORY]
+
+    exp_custom_ntp = [d["hostname"] for d in INVENTORY
+                      if d["config"]["ntp"] != GLOBAL_NTP]
 
     # Part 5
     DeviceOfflineError = ns.get("DeviceOfflineError")
@@ -373,26 +357,13 @@ if ns:
             }
         }
     }
-    exp_ansible_yaml_starts = "all:\n"
+
     ansible_inv_yaml = ns.get("ansible_inv_yaml", "")
-    ansible_yaml_ok  = isinstance(ansible_inv_yaml, str) and ansible_inv_yaml.startswith(exp_ansible_yaml_starts)
+    ansible_yaml_ok  = isinstance(ansible_inv_yaml, str) and ansible_inv_yaml.startswith("all:\n")
 
-    up_devs = [d for d in INVENTORY if d["status"] == "up"]
-    exp_ntp_payloads = [
-        {
-            "hostname": d["hostname"],
-            "payload": {
-                "Cisco-IOS-XE-native:ntp": {
-                    "server": {
-                        "server-list": [{"ip-address": d["config"]["ntp"]}]
-                    }
-                }
-            },
-        }
-        for d in up_devs
-    ]
+    exp_roundtrip = json.loads(json.dumps(INVENTORY))
 
-    # Part 7 — file checks
+    # Part 7
     hosts_path = os.path.join(work_dir, "hosts.yaml")
     hosts_reloaded = None
     if os.path.exists(hosts_path):
@@ -413,15 +384,15 @@ if ns:
 
     # Part 8
     def _compliance(d):
-        checks = {
-            "status_up":    d["status"] == "up",
-            "standard_ntp": d["config"]["ntp"] == GLOBAL_NTP,
-            "has_vlans":    bool(d["vlans"]),
-        }
+        su  = d["status"] == "up"
+        sn  = d["config"]["ntp"] == GLOBAL_NTP
+        hv  = bool(d["vlans"])
         return {
-            "hostname": d["hostname"],
-            "overall":  "PASS" if all(checks.values()) else "FAIL",
-            "checks":   checks,
+            "hostname":    d["hostname"],
+            "overall":     "PASS" if all([su, sn, hv]) else "FAIL",
+            "status_up":   su,
+            "standard_ntp": sn,
+            "has_vlans":   hv,
         }
     exp_compliance = [_compliance(d) for d in INVENTORY]
 
@@ -429,11 +400,10 @@ if ns:
                       if d["status"] == "up" and d["platform"] in ("IOS-XE", "NX-OS")]
     exp_pipeline_report = [
         {
-            "hostname":      d["hostname"],
-            "status":        d["status"],
-            "vlan_count":    len(d["vlans"]),
+            "hostname":       d["hostname"],
+            "status":         d["status"],
+            "vlan_count":     len(d["vlans"]),
             "connect_result": f"connected: {d['hostname']}",
-            "config_lines":  len(_gen_base(d).splitlines()),
         }
         for d in pipeline_valid
     ]
@@ -447,259 +417,136 @@ if ns:
 
     # ── SOLUTION WAYS ──────────────────────────────────────────────────────────
 
-    w1a = [("List comprehension",
-            ["up_devices = [d for d in INVENTORY if d['status'] == 'up']"])]
-    w1b = [("Dict comprehension",
-            ["hostname_to_ip = {d['hostname']: d['ip'] for d in INVENTORY}"])]
-    w1c = [("setdefault + sort",
-            ["site_hostnames = {}",
-             "for d in INVENTORY:",
-             "    site_hostnames.setdefault(d['site'], []).append(d['hostname'])",
-             "for k in site_hostnames: site_hostnames[k].sort()"])]
-    w1d = [("sorted set comprehension",
-            ["all_vlans = sorted(set(v for d in INVENTORY for v in d['vlans']))"])]
-    w2a = [("setdefault + sorted",
-            ["vlan_to_hostnames = {}",
-             "for d in INVENTORY:",
-             "    for v in d['vlans']:",
-             "        vlan_to_hostnames.setdefault(v, set()).add(d['hostname'])",
-             "vlan_to_hostnames = {k: sorted(v) for k, v in vlan_to_hostnames.items()}"])]
-    w2b = [("sorted comprehension",
-            ["bgp_devices = sorted(d['hostname'] for d in INVENTORY if d['bgp'] is not None)"])]
-    w2c = [("Dict comprehension with projection",
-            ["enriched_inventory = {",
-             "    d['hostname']: {",
-             "        'site': d['site'], 'role': d['role'], 'platform': d['platform'],",
-             "        'status': d['status'], 'vlan_count': len(d['vlans']),",
-             "        'has_bgp': d['bgp'] is not None,",
-             "    }",
-             "    for d in INVENTORY",
-             "}"])]
-    w3a = [("if/elif chain",
-            ["def classify_device(hostname):",
-             "    if 'rtr' in hostname: return 'router'",
-             "    if 'sw'  in hostname: return 'switch'",
-             "    if 'fw'  in hostname: return 'firewall'",
-             "    return 'unknown'"])]
-    w3b = [("f-string join",
-            ["def gen_base_config(device):",
-             "    return (f'hostname {device[\"hostname\"]}\\n'",
-             "            f'ntp server {device[\"config\"][\"ntp\"]}\\n'",
-             "            f'ip name-server {device[\"config\"][\"dns\"]}')"])]
-    w3c = [("sorted comprehension",
-            ["def get_devices_by_role(inventory, role):",
-             "    return sorted(d['hostname'] for d in inventory if d['role'] == role)"])]
-    w4a = [("For loop with .get()",
-            ["platform_counts = {}",
-             "for d in INVENTORY:",
-             "    p = d['platform']",
-             "    platform_counts[p] = platform_counts.get(p, 0) + 1"])]
-    w4b = [("For loop with break",
-            ["first_large_up_device = None",
-             "for d in INVENTORY:",
-             "    if d['status'] == 'up' and len(d['vlans']) > 3:",
-             "        first_large_up_device = d['hostname']",
-             "        break"])]
-    w4c = [("if/elif chain per device",
-            ["device_labels = []",
-             "for d in INVENTORY:",
-             "    if d['status'] == 'down':",
-             "        device_labels.append(f'OFFLINE: {d[\"hostname\"]}')",
-             "    elif d['platform'] == 'ASA' and d['status'] == 'up':",
-             "        device_labels.append(f'FIREWALL: {d[\"hostname\"]}')",
-             "    elif d['role'] == 'core' and d['status'] == 'up':",
-             "        device_labels.append(f'CORE: {d[\"hostname\"]}')",
-             "    else:",
-             "        device_labels.append(f'OTHER: {d[\"hostname\"]}')",])]
-    w5a = [("class inheriting Exception",
-            ["class DeviceOfflineError(Exception):",
-             "    pass"])]
-    w5b = [("raise on down, return on up",
-            ["def safe_connect(device):",
-             "    if device['status'] == 'down':",
-             "        raise DeviceOfflineError(f\"{device['hostname']} is offline\")",
-             "    return f\"connected: {device['hostname']}\""])]
-    w5c = [("loop with try/except",
-            ["def batch_connect(inventory):",
-             "    result = {'connected': [], 'offline': [], 'errors': []}",
-             "    for d in inventory:",
-             "        try:",
-             "            safe_connect(d)",
-             "            result['connected'].append(d['hostname'])",
-             "        except DeviceOfflineError:",
-             "            result['offline'].append(d['hostname'])",
-             "        except Exception:",
-             "            result['errors'].append(d['hostname'])",
-             "    return result"])]
-    w6a = [("dict comprehension with PLATFORM_OS",
-            ["ansible_inv = {'all': {'hosts': {",
-             "    d['hostname']: {",
-             "        'ansible_host': d['ip'],",
-             "        'ansible_network_os': PLATFORM_OS[d['platform']],",
-             "        'ansible_user': 'admin',",
-             "    }",
-             "    for d in INVENTORY",
-             "}}}"])]
-    w6b = [("yaml.dump",
-            ["ansible_inv_yaml = yaml.dump(ansible_inv, default_flow_style=False)"])]
-    w6c = [("list comprehension",
-            ["ntp_payloads = [",
-             "    {'hostname': d['hostname'],",
-             "     'payload': {'Cisco-IOS-XE-native:ntp': {",
-             "         'server': {'server-list': [{'ip-address': d['config']['ntp']}]}}}}",
-             "    for d in INVENTORY if d['status'] == 'up'",
-             "]"])]
-    w7a = [("yaml.dump to file",
-            ["with open('hosts.yaml', 'w') as f:",
-             "    yaml.dump(ansible_inv, f, default_flow_style=False)"])]
-    w7b = [("makedirs + write per device",
-            ["os.makedirs('configs', exist_ok=True)",
-             "for d in INVENTORY:",
-             "    with open(f\"configs/{d['hostname']}.cfg\", 'w') as f:",
-             "        f.write(gen_base_config(d))",
-             "cfg_files = sorted(os.listdir('configs'))"])]
-    w7c = [("json.dump then json.load",
-            ["with open('inventory.json', 'w') as f:",
-             "    json.dump(INVENTORY, f, indent=2)",
-             "with open('inventory.json') as f:",
-             "    json_inventory = json.load(f)"])]
-    w8a = [("per-device check dict",
-            ["compliance_report = []",
-             "for d in INVENTORY:",
-             "    checks = {",
-             "        'status_up':    d['status'] == 'up',",
-             "        'standard_ntp': d['config']['ntp'] == GLOBAL_NTP,",
-             "        'has_vlans':    bool(d['vlans']),",
-             "    }",
-             "    compliance_report.append({",
-             "        'hostname': d['hostname'],",
-             "        'overall': 'PASS' if all(checks.values()) else 'FAIL',",
-             "        'checks': checks,",
-             "    })"])]
-    w8b = [("filter + connect + config",
-            ["pipeline_report = []",
-             "valid = [d for d in INVENTORY",
-             "         if d['status'] == 'up' and d['platform'] in ('IOS-XE','NX-OS')]",
-             "for d in valid:",
-             "    pipeline_report.append({",
-             "        'hostname':      d['hostname'],",
-             "        'status':        d['status'],",
-             "        'vlan_count':    len(d['vlans']),",
-             "        'connect_result': safe_connect(d),",
-             "        'config_lines':  len(gen_base_config(d).splitlines()),",
-             "    })",
-             "pipeline_hostnames = sorted(d['hostname'] for d in valid)"])]
-    w8c = [("json.dump to file",
-            ["with open('pipeline_report.json', 'w') as f:",
-             "    json.dump(pipeline_report, f, indent=2)"])]
+    w1a = [("List comprehension", ["up_hostnames = [d['hostname'] for d in INVENTORY if d['status'] == 'up']"])]
+    w1b = [("Dict comprehension", ["hostname_to_ip = {d['hostname']: d['ip'] for d in INVENTORY}"])]
+    w1c = [("For loop with .get()", ["platform_counts = {}", "for d in INVENTORY:", "    p = d['platform']", "    platform_counts[p] = platform_counts.get(p, 0) + 1"])]
+    w1d = [("Sorted set comprehension", ["all_vlans = sorted(set(v for d in INVENTORY for v in d['vlans']))"])]
+    w2a = [("setdefault + sort", ["site_hostnames = {}", "for d in INVENTORY:", "    site_hostnames.setdefault(d['site'], []).append(d['hostname'])", "for k in site_hostnames: site_hostnames[k].sort()"])]
+    w2b = [("Sorted comprehension", ["bgp_devices = sorted(d['hostname'] for d in INVENTORY if d['bgp'] is not None)"])]
+    w2c = [("setdefault + sort", ["ntp_map = {}", "for d in INVENTORY:", "    ntp_map.setdefault(d['config']['ntp'], []).append(d['hostname'])", "for k in ntp_map: ntp_map[k].sort()"])]
+    w3a = [("if/elif chain", ["def classify_device(hostname):", "    if 'rtr' in hostname: return 'router'", "    if 'sw'  in hostname: return 'switch'", "    if 'fw'  in hostname: return 'firewall'", "    return 'unknown'"])]
+    w3b = [("f-string", ["def gen_base_config(device):", "    return (f'hostname {device[\"hostname\"]}\\n'", "            f'ntp server {device[\"config\"][\"ntp\"]}\\n'", "            f'ip name-server {device[\"config\"][\"dns\"]}')"])]
+    w3c = [("Sorted comprehension", ["def get_devices_by_role(inventory, role):", "    return sorted(d['hostname'] for d in inventory if d['role'] == role)"])]
+    w4a = [("For loop with break", ["first_large_up_device = None", "for d in INVENTORY:", "    if d['status'] == 'up' and len(d['vlans']) > 3:", "        first_large_up_device = d['hostname']", "        break"])]
+    w4b = [("if/elif chain per device", ["device_labels = []", "for d in INVENTORY:", "    if d['status'] == 'down':", "        device_labels.append(f'OFFLINE: {d[\"hostname\"]}')", "    elif d['platform'] == 'ASA' and d['status'] == 'up':", "        device_labels.append(f'FIREWALL: {d[\"hostname\"]}')", "    elif d['role'] == 'core' and d['status'] == 'up':", "        device_labels.append(f'CORE: {d[\"hostname\"]}')", "    else:", "        device_labels.append(f'OTHER: {d[\"hostname\"]}')"])]
+    w4c = [("List comprehension", ["custom_ntp_hosts = [d['hostname'] for d in INVENTORY", "                    if d['config']['ntp'] != GLOBAL_NTP]"])]
+    w5a = [("class", ["class DeviceOfflineError(Exception):", "    pass"])]
+    w5b = [("raise/return", ["def safe_connect(device):", "    if device['status'] == 'down':", "        raise DeviceOfflineError(f\"{device['hostname']} is offline\")", "    return f\"connected: {device['hostname']}\""])]
+    w5c = [("try/except loop", ["def batch_connect(inventory):", "    result = {'connected': [], 'offline': [], 'errors': []}", "    for d in inventory:", "        try:", "            safe_connect(d)", "            result['connected'].append(d['hostname'])", "        except DeviceOfflineError:", "            result['offline'].append(d['hostname'])", "        except Exception:", "            result['errors'].append(d['hostname'])", "    return result"])]
+    w6a = [("Dict comprehension", ["ansible_inv = {'all': {'hosts': {", "    d['hostname']: {'ansible_host': d['ip'],", "                    'ansible_network_os': PLATFORM_OS[d['platform']],", "                    'ansible_user': 'admin'}", "    for d in INVENTORY}}}"])]
+    w6b = [("yaml.dump", ["ansible_inv_yaml = yaml.dump(ansible_inv, default_flow_style=False)"])]
+    w6c = [("json round-trip", ["inv_json_roundtrip = json.loads(json.dumps(INVENTORY))"])]
+    w7a = [("yaml.dump to file", ["with open('hosts.yaml', 'w') as f:", "    yaml.dump(ansible_inv, f, default_flow_style=False)"])]
+    w7b = [("makedirs + write + listdir", ["os.makedirs('configs', exist_ok=True)", "for d in INVENTORY:", "    with open(f\"configs/{d['hostname']}.cfg\", 'w') as f:", "        f.write(gen_base_config(d))", "cfg_files = sorted(os.listdir('configs'))"])]
+    w7c = [("json.dump + json.load", ["with open('inventory.json', 'w') as f:", "    json.dump(INVENTORY, f, indent=2)", "with open('inventory.json') as f:", "    json_inventory = json.load(f)"])]
+    w8a = [("Per-device check dict", ["compliance_report = []", "for d in INVENTORY:", "    su = d['status'] == 'up'", "    sn = d['config']['ntp'] == GLOBAL_NTP", "    hv = bool(d['vlans'])", "    compliance_report.append({'hostname': d['hostname'],", "        'overall': 'PASS' if all([su,sn,hv]) else 'FAIL',", "        'status_up': su, 'standard_ntp': sn, 'has_vlans': hv})"])]
+    w8b = [("Filter + connect + report", ["valid = [d for d in INVENTORY if d['status']=='up' and d['platform'] in ('IOS-XE','NX-OS')]", "pipeline_report = [{'hostname': d['hostname'], 'status': d['status'],", "    'vlan_count': len(d['vlans']), 'connect_result': safe_connect(d)} for d in valid]", "pipeline_hostnames = sorted(d['hostname'] for d in valid)"])]
+    w8c = [("json.dump to file", ["with open('pipeline_report.json', 'w') as f:", "    json.dump(pipeline_report, f, indent=2)"])]
 
-    # ── RUN GRADE ──────────────────────────────────────────────────────────────
+    # ── RUN ───────────────────────────────────────────────────────────────────
     grade([
         # Part 1
-        ("1a. up_devices — 5 device dicts with status 'up'",
-         ns.get("up_devices"), exp_up_devices,
-         "[d for d in INVENTORY if d['status'] == 'up']",
-         w1a, "up_devices"),
+        ("1a. up_hostnames — 5 hostnames with status 'up'",
+         ns.get("up_hostnames"), exp_up_hostnames,
+         "[d['hostname'] for d in INVENTORY if d['status'] == 'up']",
+         w1a, "up_hostnames"),
         ("1b. hostname_to_ip — 8 hostname→ip pairs",
          ns.get("hostname_to_ip"), exp_h2ip,
          "{d['hostname']: d['ip'] for d in INVENTORY}",
          w1b, "hostname_to_ip"),
-        ("1c. site_hostnames — site → sorted list of hostnames",
-         ns.get("site_hostnames"), exp_site_hosts,
-         "setdefault + append + sort per site",
-         w1c, "site_hostnames"),
+        ("1c. platform_counts — {'IOS-XE':4,'NX-OS':2,'ASA':2}",
+         ns.get("platform_counts"), exp_plat_counts,
+         "counts[p] = counts.get(p, 0) + 1 in a for loop",
+         w1c, "platform_counts"),
         ("1d. all_vlans — [10, 20, 30, 40, 50]",
          ns.get("all_vlans"), exp_all_vlans,
          "sorted(set(v for d in INVENTORY for v in d['vlans']))",
          w1d, "all_vlans"),
         # Part 2
-        ("2a. vlan_to_hostnames — vlan → sorted hostnames",
-         ns.get("vlan_to_hostnames"), exp_v2h,
-         "setdefault(v, set()).add(hostname), then sorted",
-         w2a, "vlan_to_hostnames"),
-        ("2b. bgp_devices — sorted hostnames with bgp != None",
+        ("2a. site_hostnames — site → sorted list of hostnames",
+         ns.get("site_hostnames"), exp_site_hosts,
+         "setdefault(site, []).append(hostname), then sort each list",
+         w2a, "site_hostnames"),
+        ("2b. bgp_devices — sorted hostnames with non-None bgp",
          ns.get("bgp_devices"), exp_bgp_devices,
          "sorted(d['hostname'] for d in INVENTORY if d['bgp'] is not None)",
          w2b, "bgp_devices"),
-        ("2c. enriched_inventory — hostname → {site,role,platform,status,vlan_count,has_bgp}",
-         ns.get("enriched_inventory"), exp_enriched,
-         "dict comprehension with 6 keys per device",
-         w2c, "enriched_inventory"),
+        ("2c. ntp_map — ntp_server → sorted list of hostnames",
+         ns.get("ntp_map"), exp_ntp_map,
+         "setdefault(d['config']['ntp'], []).append(hostname), then sort",
+         w2c, "ntp_map"),
         # Part 3
         ("3a. classify_device — router/switch/firewall/unknown",
          classify_results, exp_classify,
-         "if 'rtr' in hostname: return 'router' elif 'sw' ... elif 'fw' ...",
+         "if 'rtr' in hostname: return 'router' elif 'sw'... elif 'fw'...",
          w3a, "classify_device results"),
         ("3b. gen_base_config — 3-line config string",
          gen_base_result, exp_gen_base,
-         "f-string: hostname / ntp server / ip name-server",
+         "f-string: hostname / ntp server / ip name-server joined with \\n",
          w3b, "gen_base_config(INVENTORY[0])"),
         ("3c. get_devices_by_role — sorted hostnames by role",
          by_role_result, exp_by_role,
          "sorted(d['hostname'] for d in inventory if d['role'] == role)",
          w3c, "get_devices_by_role(INVENTORY,'core')"),
         # Part 4
-        ("4a. platform_counts — {'IOS-XE':4,'NX-OS':2,'ASA':2}",
-         ns.get("platform_counts"), exp_plat_counts,
-         "counts[p] = counts.get(p, 0) + 1 in a for loop",
-         w4a, "platform_counts"),
-        ("4b. first_large_up_device — 'ams-rtr-02'",
+        ("4a. first_large_up_device — 'ams-rtr-02'",
          ns.get("first_large_up_device"), exp_first_large,
          "for loop with if status=='up' and len(vlans)>3: ... break",
-         w4b, "first_large_up_device"),
-        ("4c. device_labels — OFFLINE/FIREWALL/CORE/OTHER prefix per device",
+         w4a, "first_large_up_device"),
+        ("4b. device_labels — OFFLINE/FIREWALL/CORE/OTHER per device",
          ns.get("device_labels"), exp_labels,
-         "if/elif chain: down → OFFLINE, ASA up → FIREWALL, core up → CORE",
-         w4c, "device_labels"),
+         "if/elif chain: down→OFFLINE, ASA up→FIREWALL, core up→CORE",
+         w4b, "device_labels"),
+        ("4c. custom_ntp_hosts — hostnames with non-standard NTP",
+         ns.get("custom_ntp_hosts"), exp_custom_ntp,
+         "[d['hostname'] for d in INVENTORY if d['config']['ntp'] != GLOBAL_NTP]",
+         w4c, "custom_ntp_hosts"),
         # Part 5
-        ("5a+5b. DeviceOfflineError + safe_connect results",
+        ("5a+5b. DeviceOfflineError + safe_connect",
          safe_connect_results, exp_safe_connect,
          "class DeviceOfflineError(Exception): pass. Raise when status=='down'.",
          w5a + w5b, "safe_connect results"),
         ("5c. batch_connect — {connected, offline, errors}",
          batch_result, exp_batch,
-         "try: safe_connect(d) → connected. except DeviceOfflineError → offline.",
+         "try: safe_connect → connected. except DeviceOfflineError → offline.",
          w5c, "batch_connect(INVENTORY)"),
         # Part 6
         ("6a. ansible_inv — {'all':{'hosts':{...}}} all 8 devices",
          ns.get("ansible_inv"), exp_ansible_inv,
-         "{'all':{'hosts':{d['hostname']:{ansible_host,ansible_network_os,...}}}}",
+         "{'all':{'hosts':{hostname:{ansible_host,ansible_network_os,ansible_user}}}}",
          w6a, "ansible_inv"),
         ("6b. ansible_inv_yaml — YAML string starting with 'all:\\n'",
          ansible_yaml_ok, True,
-         "yaml.dump(ansible_inv, default_flow_style=False)",
+         "ansible_inv_yaml = yaml.dump(ansible_inv, default_flow_style=False)",
          w6b, "ansible_inv_yaml"),
-        ("6c. ntp_payloads — 5 RESTCONF dicts for up devices",
-         ns.get("ntp_payloads"), exp_ntp_payloads,
-         "{'Cisco-IOS-XE-native:ntp':{'server':{'server-list':[{'ip-address':...}]}}}",
-         w6c, "ntp_payloads"),
+        ("6c. inv_json_roundtrip — equals INVENTORY after JSON round-trip",
+         ns.get("inv_json_roundtrip"), exp_roundtrip,
+         "json.loads(json.dumps(INVENTORY))",
+         w6c, "inv_json_roundtrip"),
         # Part 7
-        ("7a. hosts.yaml — written correctly to disk",
+        ("7a. hosts.yaml — written and readable as ansible_inv",
          hosts_reloaded, exp_ansible_inv,
          "with open('hosts.yaml','w') as f: yaml.dump(ansible_inv, f, default_flow_style=False)",
          w7a, "yaml.safe_load('hosts.yaml')"),
         ("7b. cfg_files — 8 sorted .cfg filenames + nyc-rtr-01.cfg content",
          (cfg_files, nyc_cfg), (exp_cfg_files, exp_nyc_cfg),
-         "os.makedirs('configs'), write gen_base_config(d) per device",
-         w7b, "(cfg_files, nyc-rtr-01.cfg content)"),
-        ("7c. json_inventory — equals INVENTORY after round-trip",
+         "os.makedirs('configs'), write gen_base_config(d) per device, sorted(os.listdir('configs'))",
+         w7b, "(cfg_files, nyc-rtr-01.cfg)"),
+        ("7c. json_inventory — equals INVENTORY after file round-trip",
          json_inv, INVENTORY,
          "json.dump(INVENTORY, f, indent=2) then json.load(f)",
          w7c, "json_inventory"),
         # Part 8
-        ("8a. compliance_report — PASS/FAIL per device, 3 checks",
+        ("8a. compliance_report — 8 dicts with overall PASS/FAIL",
          ns.get("compliance_report"), exp_compliance,
-         "check status_up, standard_ntp, has_vlans per device",
+         "3 bool checks per device. overall='PASS' only if all pass.",
          w8a, "compliance_report"),
-        ("8b. pipeline_report — 3 dicts for up IOS-XE/NX-OS devices",
-         ns.get("pipeline_report"), exp_pipeline_report,
-         "filter up + IOS-XE/NX-OS, safe_connect, gen_base_config",
-         w8b, "pipeline_report"),
-        ("8b. pipeline_hostnames — ['ams-rtr-02','nyc-rtr-01','syd-rtr-01']",
-         ns.get("pipeline_hostnames"), exp_pipeline_hostnames,
-         "sorted(d['hostname'] for d in valid)",
-         w8b, "pipeline_hostnames"),
-        ("8c. pipeline_report.json — written to disk correctly",
+        ("8b. pipeline_report + pipeline_hostnames — 3 up IOS-XE/NX-OS devices",
+         (ns.get("pipeline_report"), ns.get("pipeline_hostnames")),
+         (exp_pipeline_report, exp_pipeline_hostnames),
+         "filter up+IOS-XE/NX-OS, safe_connect per device, sorted hostnames",
+         w8b, "(pipeline_report, pipeline_hostnames)"),
+        ("8c. pipeline_report.json — written correctly to disk",
          pipe_report_file, exp_pipeline_report,
          "json.dump(pipeline_report, f, indent=2)",
          w8c, "pipeline_report.json"),

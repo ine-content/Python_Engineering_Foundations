@@ -1253,29 +1253,25 @@ chapter(9, "Common Dict Patterns")
 section("9.1 — Counting Occurrences")
 
 explain("Count how many times each platform appears.")
-blank()
-explain("This is the frequency-counter pattern.")
-explain("The first time we see a platform its count does not exist yet.")
-explain(".get(platform, 0) returns 0 as a safe starting value.")
-explain("We then add 1 and store the result back under the same key.")
-explain("No if-statement needed — .get() handles the 'first seen' case.")
+explain("Start with an empty dict.")
+explain("For each device, use .get() to read the current count.")
+explain("If the platform is new, .get() returns 0.")
+explain("Add 1 and store the result back.")
 blank()
 
 inventory = [
-    {"hostname": "nyc-rtr-01", "platform": "IOS-XE"},
-    {"hostname": "lon-sw-01",  "platform": "NX-OS"},
-    {"hostname": "sin-fw-01",  "platform": "ASA"},
-    {"hostname": "ams-rtr-02", "platform": "IOS-XE"},
-    {"hostname": "tok-sw-01",  "platform": "NX-OS"},
-    {"hostname": "syd-rtr-01", "platform": "IOS-XE"},
+    {"hostname": "rtr-01", "platform": "IOS-XE"},
+    {"hostname": "sw-01",  "platform": "NX-OS"},
+    {"hostname": "rtr-02", "platform": "IOS-XE"},
+    {"hostname": "fw-01",  "platform": "ASA"},
+    {"hostname": "rtr-03", "platform": "IOS-XE"},
 ]
-cmd("inventory = [  # 6 devices across 3 platforms")
-cmd("    {'hostname': 'nyc-rtr-01', 'platform': 'IOS-XE'},")
-cmd("    {'hostname': 'lon-sw-01',  'platform': 'NX-OS'},")
-cmd("    {'hostname': 'sin-fw-01',  'platform': 'ASA'},")
-cmd("    {'hostname': 'ams-rtr-02', 'platform': 'IOS-XE'},")
-cmd("    {'hostname': 'tok-sw-01',  'platform': 'NX-OS'},")
-cmd("    {'hostname': 'syd-rtr-01', 'platform': 'IOS-XE'},")
+cmd("inventory = [")
+cmd("    {'hostname': 'rtr-01', 'platform': 'IOS-XE'},")
+cmd("    {'hostname': 'sw-01',  'platform': 'NX-OS'},")
+cmd("    {'hostname': 'rtr-02', 'platform': 'IOS-XE'},")
+cmd("    {'hostname': 'fw-01',  'platform': 'ASA'},")
+cmd("    {'hostname': 'rtr-03', 'platform': 'IOS-XE'},")
 cmd("]")
 blank()
 
@@ -1284,44 +1280,23 @@ pause()
 cmd("counts = {}")
 counts = {}
 cmd("for d in inventory:")
-cmd("    platform = d['platform']")
-cmd("    counts[platform] = counts.get(platform, 0) + 1")
+cmd("    p = d['platform']")
+cmd("    counts[p] = counts.get(p, 0) + 1")
 for d in inventory:
-    platform = d["platform"]
-    counts[platform] = counts.get(platform, 0) + 1
+    p = d["platform"]
+    counts[p] = counts.get(p, 0) + 1
 cmd("print(counts)")
 out(counts)
 blank()
-
-pause()
-
-explain("Same thing as a dict comprehension:")
-blank()
-explain("We first collect the unique platform names using a set comprehension.")
-explain("Then we build a dict where each platform is a key and its count")
-explain("is computed by summing 1 for every device with that platform.")
-explain("This is more readable as a one-liner but does two passes over inventory.")
-explain("The loop above is more efficient for large inventories.")
-blank()
-platforms = set(d["platform"] for d in inventory)
-cmd("platforms = set(d['platform'] for d in inventory)")
-cmd("counts = {p: sum(1 for d in inventory if d['platform'] == p)")
-cmd("         for p in platforms}")
-counts_c = {p: sum(1 for d in inventory if d["platform"] == p) for p in platforms}
-cmd("print(counts_c)")
-out(counts_c)
-blank()
+explain("IOS-XE appears 3 times, NX-OS once, ASA once.")
 
 pause()
 
 section("9.2 — Grouping by a Field")
 
-explain("Group devices by platform into a dict of lists.")
-blank()
-explain("This is the same .setdefault() pattern from Chapter 4,")
-explain("applied to the real-world problem of sorting an inventory.")
-explain("After this loop, each platform key maps to a list of hostnames")
-explain("that belong to it — perfect for platform-scoped automation tasks.")
+explain("Group hostnames by platform.")
+explain("Use .setdefault() to create an empty list the first time")
+explain("a platform appears, then append to it every time.")
 blank()
 
 cmd("groups = {}")
@@ -1335,104 +1310,84 @@ for d in inventory:
 cmd("print(groups)")
 out(groups)
 blank()
+explain("Each platform key now maps to a list of its hostnames.")
 
 pause()
 
 section("9.3 — Building a Lookup Dict")
 
-explain("Index a list of dicts by a unique key for O(1) lookup.")
-blank()
-explain("Iterating a list to find one device is O(n) — every search scans all items.")
-explain("Building a lookup dict is O(n) once, then every query is O(1).")
-explain("For 1000 devices queried 1000 times: O(n²) vs O(n). A huge difference.")
-explain("Always build a lookup dict before running repeated searches.")
+explain("A lookup dict lets you find a device by hostname instantly.")
+explain("Without it you would have to scan the whole list every time.")
 blank()
 
-cmd("lookup = {d['hostname']: d for d in inventory}")
-lookup = {d["hostname"]: d for d in inventory}
-cmd("print(lookup['nyc-rtr-01'])")
-out(lookup["nyc-rtr-01"])
+cmd("lookup = {}")
+lookup = {}
+cmd("for d in inventory:")
+cmd("    lookup[d['hostname']] = d")
+for d in inventory:
+    lookup[d["hostname"]] = d
+cmd("print(lookup['rtr-01'])")
+out(lookup["rtr-01"])
 blank()
-
-pause()
-
-explain("Without lookup — O(n) search every time:")
-blank()
-explain("next() with a generator scans from the start of inventory each call.")
-explain("For a single lookup this is fine; for hundreds of lookups in a loop it is slow.")
-explain("The ', None' argument is the default if no match is found.")
-blank()
-cmd("# Slow — scans entire list every time")
-cmd("target = next((d for d in inventory if d['hostname'] == 'nyc-rtr-01'), None)")
-cmd("print(target)")
-target = next((d for d in inventory if d["hostname"] == "nyc-rtr-01"), None)
-out(target)
+explain("One key lookup — no loop needed.")
 blank()
 
 pause()
 
-explain("With lookup — O(1) direct access:")
+explain("Searching without a lookup dict:")
 blank()
-explain("lookup.get('nyc-rtr-01') jumps straight to the value via the hash table.")
-explain("Speed does not change whether inventory has 10 or 10,000 devices.")
+cmd("for d in inventory:")
+cmd("    if d['hostname'] == 'rtr-01':")
+cmd("        print(d)")
+cmd("        break")
 blank()
-cmd("# Fast — direct key access")
-cmd("target = lookup.get('nyc-rtr-01')")
-cmd("print(target)")
-out(lookup.get("nyc-rtr-01"))
+for d in inventory:
+    if d["hostname"] == "rtr-01":
+        out(d)
+        break
 blank()
+explain("This works, but scans every device from the start each time.")
+explain("With many devices and many searches, a lookup dict is much faster.")
 
 pause()
 
 section("9.4 — Template Config Pattern")
 
-explain("Define a base config dict, then customize per site.")
-blank()
-explain("BASE holds organisation-wide defaults that apply everywhere.")
-explain("Each site dict only specifies what differs from BASE.")
-explain("We create a fresh copy of BASE for each site with {**BASE},")
-explain("then apply site-specific overrides on top.")
-explain("Sites that set ntp_override get a custom NTP server.")
-explain("Sites that leave it as None inherit the BASE NTP server.")
+explain("Define shared defaults in a BASE dict.")
+explain("Copy BASE for each site, then apply any site-specific changes.")
 blank()
 
-BASE = {"ntp": "10.0.0.100", "dns": "8.8.8.8", "domain": "corp.net", "vlans": [1, 10]}
-sites_data = [
-    {"name": "NYC", "hostname": "nyc-rtr-01", "ntp_override": "10.1.0.100"},
-    {"name": "LON", "hostname": "lon-sw-01",  "ntp_override": None},
-]
-cmd("BASE = {'ntp': '10.0.0.100', 'dns': '8.8.8.8', 'domain': 'corp.net'}")
-cmd("sites_data = [")
-cmd("    {'name': 'NYC', 'hostname': 'nyc-rtr-01', 'ntp_override': '10.1.0.100'},")
-cmd("    {'name': 'LON', 'hostname': 'lon-sw-01',  'ntp_override': None},")
+BASE = {"ntp": "10.0.0.1", "dns": "8.8.8.8"}
+cmd("BASE = {'ntp': '10.0.0.1', 'dns': '8.8.8.8'}")
+blank()
+cmd("sites = [")
+cmd("    {'hostname': 'rtr-01', 'ntp': '10.1.0.1'},")
+cmd("    {'hostname': 'rtr-02', 'ntp': None},")
 cmd("]")
+sites = [
+    {"hostname": "rtr-01", "ntp": "10.1.0.1"},
+    {"hostname": "rtr-02", "ntp": None},
+]
 blank()
 
 pause()
 
-cmd("configs = []")
-configs = []
-cmd("for site in sites_data:")
-cmd("    cfg = {**BASE}                    # copy base")
+cmd("for site in sites:")
+cmd("    cfg = dict(BASE)               # fresh copy of defaults")
 cmd("    cfg['hostname'] = site['hostname']")
-cmd("    if site['ntp_override']:")
-cmd("        cfg['ntp'] = site['ntp_override']")
-cmd("    configs.append(cfg)")
-explain("  NYC has ntp_override set, so it overrides the BASE NTP value.")
-explain("  LON has ntp_override = None (falsy), so it keeps BASE's NTP.")
+cmd("    if site['ntp']:                # override only if set")
+cmd("        cfg['ntp'] = site['ntp']")
+cmd("    print(cfg['hostname'], '->', cfg['ntp'])")
 blank()
-for site in sites_data:
-    cfg = {**BASE}
+for site in sites:
+    cfg = dict(BASE)
     cfg["hostname"] = site["hostname"]
-    if site["ntp_override"]:
-        cfg["ntp"] = site["ntp_override"]
-    configs.append(cfg)
-cmd("for c in configs:")
-cmd("    print(c['hostname'], '→ ntp:', c['ntp'])")
+    if site["ntp"]:
+        cfg["ntp"] = site["ntp"]
+    out(f"{cfg['hostname']} -> {cfg['ntp']}")
 blank()
-for c in configs:
-    out(f"{c['hostname']} → ntp: {c['ntp']}")
-blank()
+explain("rtr-01 gets its own NTP server.")
+explain("rtr-02 keeps the BASE default because ntp is None.")
 
 pause()
 
@@ -1443,27 +1398,22 @@ chapter(10, "Common Pitfalls")
 
 section("10.1 — KeyError")
 
-explain("Accessing a missing key raises KeyError.")
-explain("Always use .get() when unsure if a key exists.")
-blank()
-explain("KeyError is one of the most common crashes in IaC scripts.")
-explain("It happens when data loaded from YAML/JSON/APIs is incomplete.")
-explain("The fix is always .get() with a sensible default.")
+explain("Accessing a key that does not exist raises KeyError.")
+explain("The script crashes immediately.")
+explain("Use .get() to avoid this.")
 blank()
 
-device = {"hostname": "nyc-rtr-01", "platform": "IOS-XE"}
-cmd("device = {'hostname': 'nyc-rtr-01', 'platform': 'IOS-XE'}")
+device = {"hostname": "rtr-01", "platform": "IOS-XE"}
+cmd("device = {'hostname': 'rtr-01', 'platform': 'IOS-XE'}")
 blank()
-cmd("print(device['vendor'])   # KeyError!")
-explain("  'vendor' was never added to device — Python raises KeyError.")
+cmd("print(device['vendor'])   # KeyError — 'vendor' not in dict")
 blank()
 try:
     print(device["vendor"])
 except KeyError as e:
     warn(f"KeyError: {e}")
 blank()
-cmd("print(device.get('vendor', 'unknown'))   # safe")
-explain("  .get() returns 'unknown' instead of crashing the script.")
+cmd("print(device.get('vendor', 'unknown'))   # safe — returns default")
 out(device.get("vendor", "unknown"))
 blank()
 
@@ -1471,27 +1421,21 @@ pause()
 
 section("10.2 — Mutating While Iterating")
 
-explain("Never add or remove keys while iterating a dict.")
-explain("It raises RuntimeError in Python 3.")
-blank()
-explain("Python's dict iterator uses a version counter internally.")
-explain("Adding or removing keys changes the counter mid-loop,")
-explain("so Python detects the change and raises RuntimeError.")
-explain("This protects you from unpredictable skipped or repeated entries.")
+explain("Never delete keys from a dict while looping over it.")
+explain("Python raises RuntimeError to stop you.")
 blank()
 
-device = {"hostname": "nyc-rtr-01", "platform": "IOS-XE", "debug": True, "verbose": False}
-cmd("device = {'hostname': 'nyc-rtr-01', 'platform': 'IOS-XE',")
-cmd("          'debug': True, 'verbose': False}")
+device = {"hostname": "rtr-01", "platform": "IOS-XE", "debug": True, "tmp": False}
+cmd("device = {'hostname': 'rtr-01', 'platform': 'IOS-XE', 'debug': True, 'tmp': False}")
 blank()
-cmd("# Wrong — mutating while iterating")
+cmd("# Wrong — crashes with RuntimeError")
 cmd("for key in device:")
-cmd("    if key in ('debug', 'verbose'):")
-cmd("        del device[key]   # RuntimeError!")
+cmd("    if key in ('debug', 'tmp'):")
+cmd("        del device[key]")
 blank()
 try:
     for key in device:
-        if key in ("debug", "verbose"):
+        if key in ("debug", "tmp"):
             del device[key]
 except RuntimeError as e:
     warn(f"RuntimeError: {e}")
@@ -1499,113 +1443,80 @@ blank()
 
 pause()
 
-explain("Fix — iterate over a copy of the keys:")
+explain("Fix — loop over a copy of the keys:")
 blank()
-explain("list(device.keys()) creates a plain list of keys at the moment it is called.")
-explain("The loop then iterates that static list — the original dict can be")
-explain("modified freely because we are no longer iterating it directly.")
-blank()
-device = {"hostname": "nyc-rtr-01", "platform": "IOS-XE", "debug": True, "verbose": False}
-cmd("device = {'hostname': 'nyc-rtr-01', 'platform': 'IOS-XE',")
-cmd("          'debug': True, 'verbose': False}")
+device = {"hostname": "rtr-01", "platform": "IOS-XE", "debug": True, "tmp": False}
+cmd("device = {'hostname': 'rtr-01', 'platform': 'IOS-XE', 'debug': True, 'tmp': False}")
 cmd("for key in list(device.keys()):")
-cmd("    if key in ('debug', 'verbose'):")
+cmd("    if key in ('debug', 'tmp'):")
 cmd("        del device[key]")
 for key in list(device.keys()):
-    if key in ("debug", "verbose"):
+    if key in ("debug", "tmp"):
         del device[key]
 cmd("print(device)")
 out(device)
 blank()
-
-pause()
-
-explain("Or use a dict comprehension — cleanest way:")
-blank()
-explain("The comprehension builds a brand-new dict from scratch.")
-explain("It never modifies the original — it just excludes the unwanted keys.")
-explain("No iteration-mutation conflict is possible because there is no loop")
-explain("over the dict being changed — we are reading it and creating a new one.")
-blank()
-device = {"hostname": "nyc-rtr-01", "platform": "IOS-XE", "debug": True, "verbose": False}
-cmd("device = {'hostname': 'nyc-rtr-01', 'platform': 'IOS-XE',")
-cmd("          'debug': True, 'verbose': False}")
-cmd("device = {k: v for k, v in device.items()")
-cmd("          if k not in ('debug', 'verbose')}")
-device = {k: v for k, v in device.items() if k not in ("debug", "verbose")}
-cmd("print(device)")
-out(device)
-blank()
+explain("list(device.keys()) takes a snapshot of the keys upfront.")
+explain("The loop works on that snapshot — safe to delete from the original.")
 
 pause()
 
 section("10.3 — Shallow Copy Trap")
 
-explain("dict.copy() is shallow — nested objects are still shared.")
-explain("Use copy.deepcopy() for nested dicts.")
-blank()
-explain("A shallow copy creates a new outer dict but reuses the same")
-explain("objects for all values. For mutable values like inner dicts or lists,")
-explain("both copies point to the exact same object in memory.")
-explain("Changing the nested object through either copy affects both.")
+explain("dict.copy() only copies the top level.")
+explain("Nested dicts inside are still shared.")
 blank()
 
-base = {"hostname": "nyc-rtr-01", "bgp": {"as_number": 65001}}
-cmd("base      = {'hostname': 'nyc-rtr-01', 'bgp': {'as_number': 65001}}")
-cmd("site_copy = base.copy()              # shallow!")
-site_copy = base.copy()
-explain("  site_copy and base now share the SAME inner 'bgp' dict.")
+device = {"hostname": "rtr-01", "bgp": {"asn": 65001}}
+cmd("device    = {'hostname': 'rtr-01', 'bgp': {'asn': 65001}}")
+cmd("copy_dev  = device.copy()")
+copy_dev = device.copy()
 blank()
-cmd("site_copy['bgp']['as_number'] = 65002")
-site_copy["bgp"]["as_number"] = 65002
-cmd("print(base['bgp'])                  # also changed!")
-warn(base["bgp"])
-explain("  ↑ base was unexpectedly modified — the shallow copy trap.")
+cmd("copy_dev['bgp']['asn'] = 99999")
+copy_dev["bgp"]["asn"] = 99999
+cmd("print(device['bgp'])   # also changed!")
+warn(device["bgp"])
+explain("  ↑ Both dicts share the same inner 'bgp' dict — changing one changes both.")
 blank()
-cmd("deep_copy = copy.deepcopy(base)     # safe")
-base["bgp"]["as_number"] = 65001
-deep_copy = copy.deepcopy(base)
-explain("  deepcopy recursively copies every nested object.")
-explain("  deep_copy['bgp'] is a completely new dict, independent of base.")
+
+pause()
+
+explain("Fix — use copy.deepcopy() for nested dicts:")
 blank()
-cmd("deep_copy['bgp']['as_number'] = 65002")
-deep_copy["bgp"]["as_number"] = 65002
-cmd("print(base['bgp'])                  # untouched")
-out(base["bgp"])
-blank()
+device = {"hostname": "rtr-01", "bgp": {"asn": 65001}}
+cmd("device    = {'hostname': 'rtr-01', 'bgp': {'asn': 65001}}")
+cmd("deep_dev  = copy.deepcopy(device)")
+deep_dev = copy.deepcopy(device)
+cmd("deep_dev['bgp']['asn'] = 99999")
+deep_dev["bgp"]["asn"] = 99999
+cmd("print(device['bgp'])   # untouched")
+out(device["bgp"])
+explain("  deepcopy makes a completely independent copy — safe to modify.")
 
 pause()
 
 section("10.4 — Key Order Is Preserved (Python 3.7+)")
 
-explain("In Python 3.7+ dicts maintain insertion order.")
-explain("You can rely on this for config generation.")
-blank()
-explain("Before Python 3.7 dict order was undefined — code could not")
-explain("depend on keys coming out in any particular sequence.")
-explain("Since 3.7 (and CPython 3.6), insertion order is guaranteed.")
-explain("This means config lines generated from a dict will always appear")
-explain("in the same order as the keys were inserted, every single run.")
+explain("Dicts remember the order keys were inserted.")
+explain("They always come out in that same order.")
 blank()
 
-cmd("config = {}")
-config = {}
-cmd("config['hostname'] = 'nyc-rtr-01'")
-config["hostname"] = "nyc-rtr-01"
-cmd("config['platform'] = 'IOS-XE'")
-config["platform"] = "IOS-XE"
-cmd("config['ip']       = '10.0.0.1'")
-config["ip"] = "10.0.0.1"
-cmd("for k, v in config.items():")
+cmd("d = {}")
+d = {}
+cmd("d['hostname'] = 'rtr-01'")
+d["hostname"] = "rtr-01"
+cmd("d['platform'] = 'IOS-XE'")
+d["platform"] = "IOS-XE"
+cmd("d['status']   = 'up'")
+d["status"] = "up"
+cmd("for k, v in d.items():")
 cmd("    print(k, ':', v)")
 blank()
-for k, v in config.items():
+for k, v in d.items():
     out(f"{k} : {v}")
 blank()
-explain("Keys always print in the order they were inserted.")
-explain("hostname → platform → ip, exactly as written above.")
-explain("No sorting, no randomness — deterministic output every time.")
-blank()
+explain("hostname, platform, status — always in insertion order.")
+explain("You can rely on this when generating config output.")
 
 pause()
 

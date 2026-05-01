@@ -262,15 +262,10 @@ if ns:
     exp_merged   = {d["hostname"]: {**BASE, **d["config"]} for d in INVENTORY}
     exp_inverted = {d["ip"]: d["hostname"] for d in INVENTORY}
 
-    platforms_unique = sorted(set(d["platform"] for d in INVENTORY))
-    exp_summary = {
-        p: {
-            "count":     sum(1 for d in INVENTORY if d["platform"] == p),
-            "up_count":  sum(1 for d in INVENTORY if d["platform"] == p and d["status"] == "up"),
-            "hostnames": sorted(d["hostname"] for d in INVENTORY if d["platform"] == p),
-        }
-        for p in platforms_unique
-    }
+    exp_platform_count = {}
+    for d in INVENTORY:
+        p = d["platform"]
+        exp_platform_count[p] = exp_platform_count.get(p, 0) + 1
 
     exp_diff = {
         d["hostname"]: d["config"]["ntp"]
@@ -385,29 +380,18 @@ if ns:
           "for d in INVENTORY:",
           "    inverted_ip[d['ip']] = d['hostname']"]),
     ]
-    ways_summary = [
-        ("set() + dict comprehension",
-         ["platforms_unique = sorted(set(d['platform'] for d in INVENTORY))",
-          "platform_summary = {",
-          "    p: {",
-          "        'count':     sum(1 for d in INVENTORY if d['platform'] == p),",
-          "        'up_count':  sum(1 for d in INVENTORY if d['platform'] == p and d['status'] == 'up'),",
-          "        'hostnames': sorted(d['hostname'] for d in INVENTORY if d['platform'] == p),",
-          "    }",
-          "    for p in platforms_unique",
-          "}"]),
-        ("For loop building dict of dicts",
-         ["platform_summary = {}",
+    ways_platform_count = [
+        ("For loop with .get()",
+         ["platform_count = {}",
           "for d in INVENTORY:",
           "    p = d['platform']",
-          "    if p not in platform_summary:",
-          "        platform_summary[p] = {'count': 0, 'up_count': 0, 'hostnames': []}",
-          "    platform_summary[p]['count'] += 1",
-          "    if d['status'] == 'up':",
-          "        platform_summary[p]['up_count'] += 1",
-          "    platform_summary[p]['hostnames'].append(d['hostname'])",
-          "for k in platform_summary:",
-          "    platform_summary[k]['hostnames'].sort()"]),
+          "    platform_count[p] = platform_count.get(p, 0) + 1"]),
+        ("For loop with setdefault",
+         ["platform_count = {}",
+          "for d in INVENTORY:",
+          "    p = d['platform']",
+          "    platform_count.setdefault(p, 0)",
+          "    platform_count[p] += 1"]),
     ]
     ways_diff = [
         ("Dict comprehension with filter",
@@ -464,10 +448,10 @@ if ns:
          ns.get("inverted_ip"), exp_inverted,
          "See Chapter 6.3 — swap key and value: {d['ip']: d['hostname'] for d in INVENTORY}.",
          ways_inverted, "inverted_ip"),
-        ("Task 11", "platform_summary — platform→{count, up_count, hostnames}",
-         ns.get("platform_summary"), exp_summary,
-         "See Chapter 9 — get unique platforms with set(), then build one summary dict per platform.",
-         ways_summary, "platform_summary"),
+        ("Task 11", "platform_count — platform→count of devices",
+         ns.get("platform_count"), exp_platform_count,
+         "See Chapter 9.1 — use counts[p] = counts.get(p, 0) + 1 in a for loop.",
+         ways_platform_count, "platform_count"),
         ("Task 12", "ntp_diff — hostname→ntp for devices not using GLOBAL_NTP",
          ns.get("ntp_diff"), exp_diff,
          "See Chapter 6.3 — filter with 'if d[\"config\"][\"ntp\"] != GLOBAL_NTP'.",

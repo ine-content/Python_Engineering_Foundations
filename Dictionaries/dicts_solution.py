@@ -89,7 +89,7 @@ INVENTORY = [
 # Task 10 — Invert IP to hostname
 
 
-# Task 11 — Summarise devices by platform
+# Task 11 — Count devices per platform
 
 
 # Task 12 — Find devices with non-standard NTP
